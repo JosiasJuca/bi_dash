@@ -22,22 +22,6 @@ __pycache__/
 *.~
 .history/
 
-# CSVs da Api - Mateus
-Api - Mateus/**/*.csv
-
-
-# CSVs de vendas
-script_vendas/**/*.csv
-
-
-# CSVs de historico
-batidas_super_paguemenos/**/*.csv
-
-
-
-# CSVs de pivotar
-Pivotar_batidas/**/*.csv
-
 
 __pycache__/
 *.pyc
