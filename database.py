@@ -203,7 +203,11 @@ def obter_estatisticas():
         total_clientes = cursor.fetchone()['total']
         
         # Chamados abertos
-        cursor.execute("SELECT COUNT(*) as total FROM chamados WHERE status != '5. Status Normal'")
+        cursor.execute("""
+                SELECT COUNT(*) as total FROM chamados 
+                WHERE status != '5. Status Normal'
+                    AND status NOT IN ('3. Novo cliente sem integração', '4. Implantado sem integração')
+        """)
         chamados_abertos = cursor.fetchone()['total']
         
         # Chamados resolvidos
