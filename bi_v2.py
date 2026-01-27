@@ -13,8 +13,6 @@ from database import (
     atualizar_checklist, obter_checklist, excluir_chamado, excluir_cliente
 )
 import os
-from dotenv import load_dotenv
-load_dotenv()
 
 # ==================== CONFIGURAÇÃO ====================
 st.set_page_config(page_title="BI Integrações v2", layout="wide", page_icon="📊")
