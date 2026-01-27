@@ -194,13 +194,6 @@ with tab_dashboard:
         ]
         
         if chamados_filtrados:
-            # Agrupa por cliente e pega o último status
-            clientes_vistos = {}
-            for chamado in chamados_filtrados:
-                cliente = chamado['cliente']
-                if cliente not in clientes_vistos:
-                    clientes_vistos[cliente] = chamado
-            
             # Exibe a tabela
             table_html = '<div style="background: #1e1e1e; border-radius: 10px; padding: 15px; border: 1px solid #333;">'
             table_html += '<table style="width: 100%; border-collapse: collapse;">'
@@ -211,7 +204,7 @@ with tab_dashboard:
             table_html += '<th style="padding: 10px; text-align: left; color: #888; font-size: 11px;">OBSERVAÇÃO</th>'
             table_html += '</tr></thead><tbody>'
             
-            for cliente, chamado in clientes_vistos.items():
+            for chamado in chamados_filtrados:
                 table_html += '<tr style="border-bottom: 1px solid #333;">'
                 table_html += f'<td style="padding: 10px; color: white;">{chamado["cliente"]}</td>'
                 table_html += f'<td style="padding: 10px; text-align: center;">{status_badge(chamado["status"])}</td>'
