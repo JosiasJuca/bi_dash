@@ -13,6 +13,8 @@ from database import (
     atualizar_checklist, obter_checklist, excluir_chamado, excluir_cliente
 )
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # ==================== CONFIGURAÇÃO ====================
 st.set_page_config(page_title="BI Integrações v2", layout="wide", page_icon="📊")
@@ -581,13 +583,34 @@ with tab_clientes:
 st.divider()
 st.caption("BI Integrações v2.0 | Sistema simplificado com SQLite | Moavi © 2026")
 
+# ==================== PROTEÇÃO POR SENHA ====================
+if 'autenticado' not in st.session_state:
+    st.session_state['autenticado'] = False
+
+SENHA_CORRETA = os.environ.get('DASH_SENHA')
+if not SENHA_CORRETA:
+    st.error('A senha do dashboard não está configurada. Defina a variável de ambiente DASH_SENHA.')
+    st.stop()
+
+if not st.session_state['autenticado']:
+    st.title('🔒 Acesso Restrito')
+    senha = st.text_input('Digite a senha para acessar o dashboard:', type='password')
+    if st.button('Entrar'):
+        if senha == SENHA_CORRETA:
+            st.session_state['autenticado'] = True
+            st.experimental_rerun()
+        else:
+            st.error('Senha incorreta!')
+    st.stop()
+
 # ==================== BOTÃO DE DOWNLOAD DO BANCO ====================
-db_path = os.path.join(os.path.dirname(__file__), "integracoes.db")
-if os.path.exists(db_path):
-    with open(db_path, "rb") as f:
-        st.download_button(
-            label="📥 Baixar banco de dados (integracoes.db)",
-            data=f,
-            file_name="integracoes.db",
-            mime="application/octet-stream"
-        )
+with st.expander('⚙️ Opções avançadas (restrito)'):
+    db_path = os.path.join(os.path.dirname(__file__), "integracoes.db")
+    if os.path.exists(db_path):
+        with open(db_path, "rb") as f:
+            st.download_button(
+                label="📥 Baixar banco de dados (integracoes.db)",
+                data=f,
+                file_name="integracoes.db",
+                mime="application/octet-stream"
+            )
