@@ -622,7 +622,7 @@ if not st.session_state['autenticado']:
     st.stop()
 
 # ==================== BOTÃO DE DOWNLOAD DO BANCO ====================
-with st.expander('⚙️ Opções avançadas (restrito)'):
+with st.expander(''):
     db_path = os.path.join(os.path.dirname(__file__), "integracoes.db")
     if os.path.exists(db_path):
         with open(db_path, "rb") as f:
