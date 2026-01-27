@@ -627,7 +627,7 @@ with st.expander(''):
     if os.path.exists(db_path):
         with open(db_path, "rb") as f:
             st.download_button(
-                label="📥 Baixar banco de dados (integracoes.db)",
+                label="",
                 data=f,
                 file_name="integracoes.db",
                 mime="application/octet-stream"
