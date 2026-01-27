@@ -12,6 +12,7 @@ from database import (
     listar_chamados_resolvidos, obter_estatisticas, buscar_cliente_por_nome,
     atualizar_checklist, obter_checklist, excluir_chamado, excluir_cliente
 )
+import os
 
 # ==================== CONFIGURAÇÃO ====================
 st.set_page_config(page_title="BI Integrações v2", layout="wide", page_icon="📊")
@@ -574,3 +575,14 @@ with tab_clientes:
 # ==================== RODAPÉ ====================
 st.divider()
 st.caption("BI Integrações v2.0 | Sistema simplificado com SQLite | Moavi © 2026")
+
+# ==================== BOTÃO DE DOWNLOAD DO BANCO ====================
+db_path = os.path.join(os.path.dirname(__file__), "integracoes.db")
+if os.path.exists(db_path):
+    with open(db_path, "rb") as f:
+        st.download_button(
+            label="📥 Baixar banco de dados (integracoes.db)",
+            data=f,
+            file_name="integracoes.db",
+            mime="application/octet-stream"
+        )
