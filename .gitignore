@@ -12,7 +12,6 @@ __pycache__/
 *.env
 *.env.*
 *.sqlite3
-*.db
 *.log
 .DS_Store
 .vscode/
@@ -39,9 +38,7 @@ batidas_super_paguemenos/**/*.csv
 # CSVs de pivotar
 Pivotar_batidas/**/*.csv
 
-# Adicionar ao .gitignore
-*.db
-*.db-journal
+
 __pycache__/
 *.pyc
 .env
