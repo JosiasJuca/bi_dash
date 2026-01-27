@@ -599,27 +599,7 @@ with tab_clientes:
 
 # ==================== RODAPÉ ====================
 st.divider()
-st.caption("BI Integrações v2.0 | Sistema simplificado com SQLite | Moavi © 2026")
-
-# ==================== PROTEÇÃO POR SENHA ====================
-if 'autenticado' not in st.session_state:
-    st.session_state['autenticado'] = False
-
-SENHA_CORRETA = os.environ.get('DASH_SENHA')
-if not SENHA_CORRETA:
-    st.error('A senha do dashboard não está configurada. Defina a variável de ambiente DASH_SENHA.')
-    st.stop()
-
-if not st.session_state['autenticado']:
-    st.title('🔒 Acesso Restrito')
-    senha = st.text_input('Digite a senha para acessar o dashboard:', type='password')
-    if st.button('Entrar'):
-        if senha == SENHA_CORRETA:
-            st.session_state['autenticado'] = True
-            st.experimental_rerun()
-        else:
-            st.error('Senha incorreta!')
-    st.stop()
+st.caption("BI Integrações v2.0 | Moavi © 2026")
 
 # ==================== BOTÃO DE DOWNLOAD DO BANCO ====================
 with st.expander(''):
