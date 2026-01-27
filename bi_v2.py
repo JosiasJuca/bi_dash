@@ -473,11 +473,21 @@ with tab_chamados:
                     st.caption(f"Aberto em: {chamado['data_abertura']}")
                 
                 with col_acoes:
-                    if st.button("✅ Resolver", key=f"resolver_{chamado['chamado_id']}"):
-                        resolver_chamado(chamado['chamado_id'])
-                        st.success("Resolvido!")
-                        st.rerun()
-                    
+                    with st.form(f"form_resolver_{chamado['chamado_id']}"):
+                        resolucao_txt = st.text_area("O que foi resolvido?", key=f"resolucao_{chamado['chamado_id']}")
+                        if st.form_submit_button("✅ Resolver", use_container_width=True):
+                            if not resolucao_txt.strip():
+                                st.warning("Descreva o que foi resolvido!")
+                                st.stop()
+                            # Atualiza o chamado com a resolução
+                            from database import get_db
+                            with get_db() as conn:
+                                cursor = conn.cursor()
+                                cursor.execute("""
+                                    UPDATE chamados SET resolucao = ?, status_original = COALESCE(status_original, status), status = '5. Status Normal', data_resolucao = CURRENT_DATE, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?
+                                """, (resolucao_txt, chamado['chamado_id']))
+                            st.success("Resolvido!")
+                            st.rerun()
                     if st.button("🗑️ Excluir", key=f"excluir_ch_{chamado['chamado_id']}", type="secondary"):
                         if excluir_chamado(chamado['chamado_id']):
                             st.success("❌ Chamado excluído!")
@@ -511,6 +521,8 @@ with tab_historico:
                 st.markdown(f"**{chamado['cliente']}** • {chamado['categoria']}")
                 if chamado['observacao']:
                     st.caption(chamado['observacao'])
+                if chamado.get('resolucao'):
+                    st.markdown(f"<span style='color:#10b981'><b>Resolução:</b> {chamado['resolucao']}</span>", unsafe_allow_html=True)
                 st.caption(f"Aberto: {chamado['data_abertura']} → Resolvido: {chamado['data_resolucao']}")
             
             with col_btn1:

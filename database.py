@@ -46,6 +46,7 @@ def init_db():
                 status TEXT NOT NULL,
                 categoria TEXT NOT NULL,
                 observacao TEXT,
+                resolucao TEXT,
                 data_abertura DATE NOT NULL,
                 data_resolucao DATE,
                 status_original TEXT,
@@ -77,11 +78,13 @@ def init_db():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chamados_cliente ON chamados(cliente_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chamados_status ON chamados(status)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chamados_categoria ON chamados(categoria)")
-        # Garante compatibilidade: se coluna status_original não existir em DBs antigos, adiciona
+        # Garante compatibilidade: se coluna status_original ou resolucao não existir em DBs antigos, adiciona
         cursor.execute("PRAGMA table_info(chamados)")
         cols = [r[1] for r in cursor.fetchall()]
         if 'status_original' not in cols:
             cursor.execute("ALTER TABLE chamados ADD COLUMN status_original TEXT")
+        if 'resolucao' not in cols:
+            cursor.execute("ALTER TABLE chamados ADD COLUMN resolucao TEXT")
         
         print("✅ Banco de dados inicializado com sucesso!")
 
@@ -184,7 +187,7 @@ def listar_chamados_resolvidos():
         cursor = conn.cursor()
         cursor.execute("""
             SELECT c.id, c.nome as cliente, ch.id as chamado_id, ch.status, 
-                   ch.categoria, ch.observacao, ch.data_abertura, ch.data_resolucao
+                   ch.categoria, ch.observacao, ch.resolucao, ch.data_abertura, ch.data_resolucao
             FROM chamados ch
             JOIN clientes c ON ch.cliente_id = c.id
             WHERE ch.data_resolucao IS NOT NULL
