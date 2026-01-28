@@ -26,3 +26,5 @@ __pycache__/
 __pycache__/
 *.pyc
 .env
+docs
+Bi_integracao_v2/DEV_GUIDE.md
