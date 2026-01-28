@@ -15,24 +15,24 @@ from database import (
 import os
 
 # ==================== PROTEÇÃO POR SENHA ====================
-if 'autenticado' not in st.session_state:
-    st.session_state['autenticado'] = False
+# if 'autenticado' not in st.session_state:
+#     st.session_state['autenticado'] = False
 
-SENHA_CORRETA = os.environ.get('DASH_SENHA')
-if not SENHA_CORRETA:
-    st.error('A senha do dashboard não está configurada. Defina a variável de ambiente DASH_SENHA.')
-    st.stop()
+# SENHA_CORRETA = os.environ.get('DASH_SENHA')
+# if not SENHA_CORRETA:
+#     st.error('A senha do dashboard não está configurada. Defina a variável de ambiente DASH_SENHA.')
+#     st.stop()
 
-if not st.session_state['autenticado']:
-    st.title('🔒 Acesso Restrito')
-    senha = st.text_input('Digite a senha para acessar o dashboard:', type='password')
-    if st.button('Entrar'):
-        if senha == SENHA_CORRETA:
-            st.session_state['autenticado'] = True
-            st.rerun()
-        else:
-            st.error('Senha incorreta!')
-    st.stop()
+# if not st.session_state['autenticado']:
+#     st.title('🔒 Acesso Restrito')
+#     senha = st.text_input('Digite a senha para acessar o dashboard:', type='password')
+#     if st.button('Entrar'):
+#         if senha == SENHA_CORRETA:
+#             st.session_state['autenticado'] = True
+#             st.rerun()
+#         else:
+#             st.error('Senha incorreta!')
+#     st.stop()
 
 # ==================== CONFIGURAÇÃO ====================
 st.set_page_config(page_title="BI Integrações v2", layout="wide", page_icon="📊")
@@ -62,6 +62,10 @@ CORES_STATUS = {
 # ==================== ESTILOS ====================
 st.markdown("""
 <style>
+    /* Global font sizing */
+    html, body, .block-container, .streamlit-expanderHeader, .css-1dq8tca {
+        font-size: 18px !important;
+    }
     .metric-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 20px;
@@ -71,12 +75,15 @@ st.markdown("""
     }
     .status-badge {
         display: inline-block;
-        padding: 5px 12px;
+        padding: 6px 14px;
         border-radius: 20px;
-        font-size: 12px;
+        font-size: 14px;
         font-weight: bold;
         color: white;
     }
+    /* Increase table and caption sizes */
+    table, th, td { font-size: 15px !important; }
+    .stCaption { font-size: 13px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -144,6 +151,10 @@ with tab_dashboard:
                 color_discrete_map=CORES_STATUS,
                 hole=0.4
             )
+            fig_status.update_layout(
+                font=dict(size=18),
+                legend=dict(font=dict(size=16))
+            )
             st.plotly_chart(fig_status, use_container_width=True)
         else:
             st.info("Nenhum chamado aberto no momento")
@@ -163,9 +174,18 @@ with tab_dashboard:
                 x='categoria',
                 y='Quantidade',
                 color='Status',
+                text='Quantidade',
                 barmode='group',
                 color_discrete_map={'abertos': '#ef4444', 'resolvidos': '#10b981'}
             )
+            fig_cat.update_layout(
+                font=dict(size=18),
+                legend=dict(font=dict(size=16)),
+                margin=dict(t=30,r=10,l=10,b=30)
+            )
+            fig_cat.update_xaxes(showline=False, showgrid=False, zeroline=False, ticks='')
+            fig_cat.update_yaxes(showline=False, showgrid=False, zeroline=False, ticks='', showticklabels=False, title='')
+            fig_cat.update_traces(texttemplate='%{text}', textposition='inside', textfont=dict(size=16, color='white'))
             st.plotly_chart(fig_cat, use_container_width=True)
         else:
             st.info("Nenhum dado disponível")
@@ -215,7 +235,7 @@ with tab_dashboard:
         
         if chamados_filtrados:
             # Exibe a tabela
-            table_html = '<div style="background: #1e1e1e; border-radius: 10px; padding: 15px; border: 1px solid #333;">'
+            table_html = '<div style="background: #f5f5f5; border-radius: 10px; padding: 15px; border: 1px solid #e0e0e0;">'
             table_html += '<table style="width: 100%; border-collapse: collapse;">'
             table_html += '<thead><tr style="border-bottom: 2px solid #444;">'
             table_html += '<th style="padding: 10px; text-align: left; color: #888; font-size: 11px;">CLIENTE</th>'
@@ -225,11 +245,11 @@ with tab_dashboard:
             table_html += '</tr></thead><tbody>'
             
             for chamado in chamados_filtrados:
-                table_html += '<tr style="border-bottom: 1px solid #333;">'
-                table_html += f'<td style="padding: 10px; color: white;">{chamado["cliente"]}</td>'
+                table_html += '<tr style="border-bottom: 1px solid #e0e0e0;">'
+                table_html += f'<td style="padding: 10px; color: #111;">{chamado["cliente"]}</td>'
                 table_html += f'<td style="padding: 10px; text-align: center;">{status_badge(chamado["status"])}</td>'
-                table_html += f'<td style="padding: 10px; color: white;">{chamado["categoria"]}</td>'
-                table_html += f'<td style="padding: 10px; color: #aaa; font-size: 13px;">{chamado.get("observacao", "") or "-"}</td>'
+                table_html += f'<td style="padding: 10px; color: #111;">{chamado["categoria"]}</td>'
+                table_html += f'<td style="padding: 10px; color: #333; font-size: 13px;">{chamado.get("observacao", "") or "-"}</td>'
                 table_html += '</tr>'
             
             table_html += '</tbody></table></div>'
@@ -289,7 +309,7 @@ with tab_dashboard:
                     clientes_checklist[cliente]['sso'] = True
             
             # Exibe a tabela
-            table_html = '<div style="background: #1e1e1e; border-radius: 10px; padding: 15px; border: 1px solid #333;">'
+            table_html = '<div style="background: #f5f5f5; border-radius: 10px; padding: 15px; border: 1px solid #e0e0e0;">'
             table_html += '<table style="width: 100%; border-collapse: collapse;">'
             table_html += '<thead><tr style="border-bottom: 2px solid #444;">'
             table_html += '<th style="padding: 10px; text-align: left; color: #888; font-size: 11px;">CLIENTE</th>'
@@ -304,16 +324,16 @@ with tab_dashboard:
             table_html += '</tr></thead><tbody>'
             
             for cliente, dados in clientes_checklist.items():
-                table_html += '<tr style="border-bottom: 1px solid #333;">'
-                table_html += f'<td style="padding: 10px; color: white;">{cliente}</td>'
+                table_html += '<tr style="border-bottom: 1px solid #e0e0e0;">'
+                table_html += f'<td style="padding: 10px; color: #111;">{cliente}</td>'
                 table_html += f'<td style="padding: 10px; text-align: center;">{status_badge(dados["status"])}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: #10b981; font-size: 18px;">{"✓" if dados["batida"] else ""}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: #10b981; font-size: 18px;">{"✓" if dados["escala"] else ""}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: #10b981; font-size: 18px;">{"✓" if dados["feriados"] else ""}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: #10b981; font-size: 18px;">{"✓" if dados["funcionarios"] else ""}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: #10b981; font-size: 18px;">{"✓" if dados["pdv"] else ""}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: #10b981; font-size: 18px;">{"✓" if dados["venda"] else ""}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: #10b981; font-size: 18px;">{"✓" if dados["sso"] else ""}</td>'
+                table_html += f'<td style="padding: 10px; text-align: center; color: {"#FF0000" if dados["batida"] else "#015524"}; font-size: 20px;">{"✗" if dados["batida"] else "✓"}</td>'
+                table_html += f'<td style="padding: 10px; text-align: center; color: {"#FF0000" if dados["escala"] else "#015524"}; font-size: 20px;">{"✗" if dados["escala"] else "✓"}</td>'
+                table_html += f'<td style="padding: 10px; text-align: center; color: {"#FF0000" if dados["feriados"] else "#000000"}; font-size: 20px;">{"✗" if dados["feriados"] else "N/A"}</td>'
+                table_html += f'<td style="padding: 10px; text-align: center; color: {"#FF0000" if dados["funcionarios"] else "#015524"}; font-size: 20px;">{"✗" if dados["funcionarios"] else "✓"}</td>'
+                table_html += f'<td style="padding: 10px; text-align: center; color: {"#FF0000" if dados["pdv"] else "#015524"}; font-size: 20px;">{"✗" if dados["pdv"] else "✓"}</td>'
+                table_html += f'<td style="padding: 10px; text-align: center; color: {"#FF0000" if dados["venda"] else "#015524"}; font-size: 20px;">{"✗" if dados["venda"] else "✓"}</td>'
+                table_html += f'<td style="padding: 10px; text-align: center; color: {"#FF0000" if dados["sso"] else "#000000"}; font-size: 20px;">{"✗" if dados["sso"] else "N/A"}</td>'
                 table_html += '</tr>'
             
             table_html += '</tbody></table></div>'
@@ -374,14 +394,18 @@ with tab_dashboard:
             color_discrete_map={'abertos': '#ef4444', 'resolvidos': '#10b981'},
             labels={'cliente': 'Cliente', 'Quantidade': 'Quantidade de Chamados'}
         )
-        
         fig_clientes.update_layout(
             xaxis_tickangle=-45,
             height=500,
             showlegend=True,
-            legend=dict(title="Status")
+            legend=dict(title="Status", font=dict(size=16)),
+            font=dict(size=18),
+            margin=dict(t=30,r=10,l=10,b=80)
         )
-        
+        fig_clientes.update_xaxes(showline=False, showgrid=False, zeroline=False, ticks='')
+        fig_clientes.update_yaxes(showline=False, showgrid=False, zeroline=False, ticks='', showticklabels=False, title='')
+        fig_clientes.update_traces(texttemplate='%{y}', textposition='inside', textfont=dict(size=16, color='white'))
+
         st.plotly_chart(fig_clientes, use_container_width=True)
     else:
         st.info("Nenhum chamado registrado ainda.")
