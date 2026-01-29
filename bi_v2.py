@@ -45,8 +45,8 @@ init_db()
 STATUS_OPTIONS = [
     "1. Implantado com problema",
     "2. Implantado refazendo",
-    "3. Novo cliente sem integração",
-    "4. Implantado sem integração",
+    "3. Cliente sem integração",
+    "4. Integração Parcial",
     "5. Status Normal",
     "6. Integração em construção"
 ]
@@ -56,8 +56,8 @@ CATEGORIAS = ["Batida", "Escala", "Feriados", "Funcionários", "PDV", "Venda", "
 CORES_STATUS = {
     "1. Implantado com problema": "#ff8800",
     "2. Implantado refazendo": "#3b82f6",
-    "3. Novo cliente sem integração": "#ef4444",
-    "4. Implantado sem integração": "#f87171",
+    "3. Cliente sem integração": "#ef4444",
+    "4. Integração Parcial": "#f87171",
     "5. Status Normal": "#10b981",
     "6. Integração em construção": "#727170"
 }
@@ -277,7 +277,7 @@ with tab_dashboard:
         # Busca clientes sem integração (status 3 e 4) e também chamados "Em construção" (status 6)
         chamados_sem_int = [
             c for c in todos_chamados
-            if ('sem integração' in (c.get('status') or '').lower()) or ('constru' in (c.get('status') or '').lower())
+            if ('sem integração' in (c.get('status') or '').lower()) or ('parcial' in (c.get('status') or '').lower()) or ('constru' in (c.get('status') or '').lower())
         ]
         
         # Aplica filtros
