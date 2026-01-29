@@ -352,6 +352,63 @@ def listar_checklists_pendentes():
         """)
         return [dict(row) for row in cursor.fetchall()]
 
+def atualizar_cliente_checklist(cliente_id, status_geral, categorias):
+    """
+    Atualiza o checklist de um cliente de forma completa.
+    Remove chamados antigos e cria novos baseado no status selecionado.
+    
+    Args:
+        cliente_id: ID do cliente
+        status_geral: Status geral (3, 4 ou 6)
+        categorias: Dict com {categoria: estado} onde estado é "✓ OK", "✗ Problema" ou "🛠️ Em Construção"
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+        
+        # Remove todos os chamados abertos do tipo 3, 4 ou 6 deste cliente
+        cursor.execute("""
+            DELETE FROM chamados 
+            WHERE cliente_id = ? 
+            AND (data_resolucao IS NULL OR data_resolucao = '')
+            AND status IN ('3. Cliente sem integração', '4. Integração Parcial', '6. Integração em construção')
+        """, (cliente_id,))
+        
+        # Para cada categoria, cria chamado se necessário
+        for categoria, estado in categorias.items():
+            # N/A ou OK não precisa de chamado
+            if estado in ["N/A", "✓ OK"]:
+                continue
+            
+            # Determina o status baseado no estado
+            if estado == "🛠️ Em Construção":
+                status_cat = "6. Integração em construção"
+            else:  # "✗ Problema"
+                status_cat = status_geral
+            
+            # Cria o chamado
+            cursor.execute("""
+                INSERT INTO chamados (cliente_id, status, categoria, observacao, data_abertura)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                cliente_id, 
+                status_cat, 
+                categoria, 
+                f"Atualizado via checklist: {estado}",
+                datetime.now().date().isoformat()
+            ))
+
+def limpar_checklist_cliente(cliente_id):
+    """Remove todos os chamados de checklist (status 3, 4, 6) de um cliente"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            DELETE FROM chamados 
+            WHERE cliente_id = ? 
+            AND (data_resolucao IS NULL OR data_resolucao = '')
+            AND status IN ('3. Cliente sem integração', '4. Integração Parcial', '6. Integração em construção')
+        """, (cliente_id,))
+        return cursor.rowcount
+
 if __name__ == "__main__":
     # Inicializa o banco quando executado diretamente
     init_db()

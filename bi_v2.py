@@ -10,9 +10,9 @@ from database import (
     init_db, adicionar_cliente, adicionar_chamado, resolver_chamado, 
     reabrir_chamado, listar_clientes, listar_chamados_abertos, 
     listar_chamados_resolvidos, obter_estatisticas, buscar_cliente_por_nome,
-    atualizar_checklist, obter_checklist, excluir_chamado, excluir_cliente
+    atualizar_checklist, obter_checklist, excluir_chamado, excluir_cliente,
+    atualizar_classificacao, atualizar_cliente_checklist, limpar_checklist_cliente
 )
-from database import atualizar_classificacao
 import os
 
 # # ==================== PROTEÇÃO POR SENHA ====================
@@ -102,8 +102,9 @@ def status_badge(status):
 st.title("📊 BI de Integrações - v2.0")
 
 # Abas principais
-tab_dashboard, tab_chamados, tab_historico, tab_clientes = st.tabs([
-    "📈 Dashboard", 
+tab_dashboard, tab_checklist, tab_chamados, tab_historico, tab_clientes = st.tabs([
+    "📈 Dashboard",
+    "⏳ Checklist",
     "🎫 Chamados Ativos", 
     "✅ Histórico",
     "👥 Gerenciar"
@@ -478,6 +479,185 @@ with tab_dashboard:
     else:
         st.info("Nenhum chamado registrado ainda.")
 
+# ==================== ABA CHECKLIST ====================
+with tab_checklist:
+    st.subheader("⏳ Gerenciar Checklist de Integração")
+    st.markdown("""Use esta aba para gerenciar clientes **sem integração completa** (novos, parciais ou em construção).
+    Para problemas em clientes já implantados, use a aba **Chamados Ativos**.""")
+    
+    # Buscar todos os clientes
+    todos_clientes = listar_clientes()
+    
+    # Filtro de busca
+    col_search, col_add = st.columns([3, 1])
+    with col_search:
+        busca_checklist = st.text_input("🔍 Buscar cliente", placeholder="Digite o nome...", key="busca_checklist")
+    with col_add:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("➕ Adicionar Cliente Novo", use_container_width=True):
+            st.session_state['show_add_modal'] = True
+    
+    # Modal para adicionar cliente
+    if st.session_state.get('show_add_modal', False):
+        with st.form("form_add_cliente_checklist"):
+            st.markdown("### ➕ Adicionar Novo Cliente")
+            novo_nome = st.text_input("Nome do Cliente")
+            nova_class = st.selectbox("Classificação", ["novo", "+3 meses", "+6 meses"])
+            col_btn1, col_btn2 = st.columns(2)
+            with col_btn1:
+                if st.form_submit_button("✅ Adicionar", use_container_width=True):
+                    if novo_nome:
+                        try:
+                            cliente_id = adicionar_cliente(novo_nome, nova_class)
+                            st.success(f"✅ Cliente '{novo_nome}' adicionado!")
+                            st.session_state['show_add_modal'] = False
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erro: {e}")
+                    else:
+                        st.warning("Digite um nome")
+            with col_btn2:
+                if st.form_submit_button("❌ Cancelar", use_container_width=True):
+                    st.session_state['show_add_modal'] = False
+                    st.rerun()
+    
+    # Filtrar clientes
+    if busca_checklist:
+        clientes_filtrados = [c for c in todos_clientes if busca_checklist.lower() in c['nome'].lower()]
+    else:
+        clientes_filtrados = todos_clientes
+    
+    st.divider()
+    st.markdown(f"**{len(clientes_filtrados)} clientes encontrados**")
+    
+    # Buscar chamados existentes para cada cliente
+    from database import get_db
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT cliente_id, status, categoria, id as chamado_id
+            FROM chamados
+            WHERE data_resolucao IS NULL OR data_resolucao = ''
+        """)
+        chamados_por_cliente = {}
+        for row in cursor.fetchall():
+            cid = row['cliente_id']
+            if cid not in chamados_por_cliente:
+                chamados_por_cliente[cid] = {'status': None, 'categorias': {}}
+            # Pega o status (prioriza 3, 4, 6)
+            if row['status'] in ['3. Cliente sem integração', '4. Integração Parcial', '6. Integração em construção']:
+                chamados_por_cliente[cid]['status'] = row['status']
+            # Guarda categoria e seu chamado_id
+            chamados_por_cliente[cid]['categorias'][row['categoria']] = {
+                'status': row['status'],
+                'chamado_id': row['chamado_id']
+            }
+    
+    # Exibir cada cliente em um card expansível
+    for cliente in clientes_filtrados:
+        cliente_id = cliente['id']
+        cliente_nome = cliente['nome']
+        cliente_class = cliente.get('classificacao', 'novo')
+        
+        # Pegar dados existentes
+        dados_cliente = chamados_por_cliente.get(cliente_id, {'status': None, 'categorias': {}})
+        status_atual = dados_cliente['status'] or '3. Cliente sem integração'
+        
+        with st.expander(f"👤 {cliente_nome} • {cliente_class}", expanded=False):
+            col_status, col_class = st.columns([2, 1])
+            
+            with col_status:
+                novo_status = st.selectbox(
+                    "Status Geral do Cliente",
+                    ["3. Cliente sem integração", "4. Integração Parcial", "6. Integração em construção"],
+                    index=["3. Cliente sem integração", "4. Integração Parcial", "6. Integração em construção"].index(status_atual),
+                    key=f"status_{cliente_id}"
+                )
+            
+            with col_class:
+                nova_class = st.selectbox(
+                    "Classificação",
+                    ["novo", "+3 meses", "+6 meses"],
+                    index=["novo", "+3 meses", "+6 meses"].index(cliente_class),
+                    key=f"class_check_{cliente_id}"
+                )
+                if nova_class != cliente_class:
+                    if st.button("💾", key=f"save_class_{cliente_id}"):
+                        if atualizar_classificacao(cliente_id, nova_class):
+                            st.success("Classificação atualizada!")
+                            st.rerun()
+            
+            st.markdown("#### 📋 Categorias de Integração")
+            st.caption("Selecione o status de cada categoria de integração:")
+            
+            # Grid de categorias
+            categorias_integracoes = ["Batida", "Escala", "Feriados", "Funcionários", "PDV", "Venda", "SSO"]
+            
+            # Organizar em 4 colunas
+            cols = st.columns(4)
+            categorias_atualizadas = {}
+            
+            for idx, categoria in enumerate(categorias_integracoes):
+                col_idx = idx % 4
+                with cols[col_idx]:
+                    # Determinar estado atual da categoria
+                    cat_info = dados_cliente['categorias'].get(categoria, {})
+                    cat_status = cat_info.get('status', '')
+                    
+                    # Mapear para opção do selectbox
+                    if categoria in ['Feriados', 'SSO']:
+                        opcoes = ["N/A", "✗ Problema", "🛠️ Em Construção"]
+                        if 'constru' in cat_status.lower() or cat_status == '6. Integração em construção':
+                            idx_atual = 2
+                        elif cat_status in ['3. Cliente sem integração', '4. Integração Parcial']:
+                            idx_atual = 1
+                        else:
+                            idx_atual = 0
+                    else:
+                        opcoes = ["✓ OK", "✗ Problema", "🛠️ Em Construção"]
+                        if 'constru' in cat_status.lower() or cat_status == '6. Integração em construção':
+                            idx_atual = 2
+                        elif cat_status in ['3. Cliente sem integração', '4. Integração Parcial']:
+                            idx_atual = 1
+                        else:
+                            idx_atual = 0
+                    
+                    categorias_atualizadas[categoria] = st.selectbox(
+                        categoria,
+                        opcoes,
+                        index=idx_atual,
+                        key=f"cat_{cliente_id}_{categoria}"
+                    )
+            
+            st.divider()
+            
+            # Botão para salvar todas as alterações
+            col_save, col_del = st.columns([3, 1])
+            with col_save:
+                if st.button("💾 Salvar Alterações", key=f"save_{cliente_id}", type="primary", use_container_width=True):
+                    try:
+                        from database import atualizar_cliente_checklist
+                        # Atualizar status e categorias
+                        atualizar_cliente_checklist(
+                            cliente_id=cliente_id,
+                            status_geral=novo_status,
+                            categorias=categorias_atualizadas
+                        )
+                        st.success(f"✅ Checklist de {cliente_nome} atualizado!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Erro ao salvar: {e}")
+            
+            with col_del:
+                if st.button("🗑️ Limpar Tudo", key=f"clear_{cliente_id}", type="secondary", use_container_width=True):
+                    try:
+                        from database import limpar_checklist_cliente
+                        limpar_checklist_cliente(cliente_id)
+                        st.success(f"✅ Checklist de {cliente_nome} limpo!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Erro: {e}")
+
 # ==================== ABA CHAMADOS ATIVOS ====================
 with tab_chamados:
     st.subheader("🎫 Gerenciar Chamados Ativos")
@@ -497,7 +677,10 @@ with tab_chamados:
                 if cliente_sel == "+ Novo Cliente":
                     novo_cliente_nome = st.text_input("Nome do Novo Cliente")
                 
-                status_sel = st.selectbox("Status", [s for s in STATUS_OPTIONS if s != "5. Status Normal"])  # Exceto "5. Status Normal"
+                status_sel = st.selectbox("Status", [
+                    "1. Implantado com problema",
+                    "2. Implantado refazendo"
+                ])  # Apenas status de problema
                 
             with col_f2:
                 categoria_sel = st.selectbox("Categoria", CATEGORIAS)
