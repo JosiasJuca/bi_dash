@@ -34,12 +34,12 @@ STATUS_OPTIONS = [
 CATEGORIAS = ["Batida", "Escala", "Feriados", "Funcionários", "PDV", "Venda", "SSO", "Geral"]
 
 CORES_STATUS = {
-    "1. Implantado com problema": "#ff8800",
-    "2. Implantado refazendo": "#3b82f6",
-    "3. Cliente sem integração": "#ef4444",
-    "4. Integração Parcial": "#f87171",
-    "5. Status Normal": "#10b981",
-    "6. Integração em construção": "#727170"
+    "1. Implantado com problema": "#143D6B",   # deep blue
+    "2. Implantado refazendo": "#2E6FB2",     # medium blue
+    "3. Cliente sem integração": "#3FA7DF",   # cyan/sky
+    "4. Integração Parcial": "#78C6F0",       # light sky
+    "5. Status Normal": "#BEE8FF",            # very light blue
+    "6. Integração em construção": "#8FA9BF"  # muted gray-blue
 }
 
 # ==================== ESTILOS ====================
@@ -79,15 +79,14 @@ def status_badge(status):
 
 # ==================== INTERFACE ====================
 
-st.title("📊 BI de Integrações - v2.0")
+st.title(" BI de Integrações")
 
 # Abas principais
-tab_dashboard, tab_checklist, tab_chamados, tab_historico, tab_clientes = st.tabs([
-    "📈 Dashboard",
-    "⏳ Checklist",
-    "🎫 Chamados Ativos", 
-    "✅ Histórico",
-    "👥 Gerenciar"
+tab_dashboard, tab_checklist, tab_chamados, tab_historico = st.tabs([
+    "Dashboard",
+    "Checklist",
+    "Chamados Ativos",
+    "Histórico"
 ])
 
 # ==================== ABA DASHBOARD ====================
@@ -121,7 +120,7 @@ with tab_dashboard:
     col_g1, col_g2 = st.columns(2)
     
     with col_g1:
-        st.subheader("📊 Distribuição por Status")
+        st.subheader(" Distribuição por Status")
         if stats['por_status']:
             df_status = pd.DataFrame([
                 {'Status': k, 'Quantidade': v} 
@@ -144,7 +143,7 @@ with tab_dashboard:
             st.info("Nenhum chamado aberto no momento")
     
     with col_g2:
-        st.subheader("📂 Chamados por Categoria")
+        st.subheader(" Chamados por Categoria")
         if stats['por_categoria']:
             df_cat = pd.DataFrame(stats['por_categoria'])
             df_cat_melted = df_cat.melt(
@@ -160,7 +159,7 @@ with tab_dashboard:
                 color='Status',
                 text='Quantidade',
                 barmode='group',
-                color_discrete_map={'abertos': '#ef4444', 'resolvidos': '#10b981'}
+                color_discrete_map={'abertos': '#9CA3AF', 'resolvidos': '#006ED2'}
             )
             fig_cat.update_layout(
                 font=dict(size=18),
@@ -177,7 +176,7 @@ with tab_dashboard:
     st.divider()
     
     # ==================== FILTROS PARA AS TABELAS ====================
-    st.subheader("🔍 Filtrar Tabelas")
+    st.subheader(" Filtrar Tabelas")
     col_filtro1, col_filtro2, col_filtro3 = st.columns(3)
     
     # Busca todos os chamados abertos para os filtros
@@ -212,7 +211,7 @@ with tab_dashboard:
     col_tab1, col_tab2 = st.columns([1, 1.5])
     
     with col_tab1:
-        st.subheader("📋 Status de Implantação")
+        st.subheader(" Status de Implantação")
         
         # Busca chamados com problemas (status 1 e 2)
         chamados_problema = [
@@ -253,7 +252,7 @@ with tab_dashboard:
             st.info("Nenhum cliente com problemas")
     
     with col_tab2:
-        st.subheader("⏳ Checklist de Integração")
+        st.subheader(" Checklist de Integração")
         
         # Busca clientes sem integração (status 3 e 4) e também chamados "Em construção" (status 6)
         chamados_sem_int = [
@@ -402,12 +401,12 @@ with tab_dashboard:
                     # 3) Existe chamado (qualquer) -> mostrar ✗ (problema pendente)
                     # 4) Sem chamado -> mostrar ✓ (ok)
                     if na:
-                        return ('N/A', '#888888')
+                        return ('N/A', '#8FA9BF')
                     if construcao:
-                        return ('🛠️', '#d97706')
+                        return ('🛠️', '#2E6FB2')
                     if has_chamado:
-                        return ('✗', '#FF0000')
-                    return ('✓', '#015524')
+                        return ('✗', "#E91616")
+                    return ('✓', "#045F2D")
 
                 batida_icon, batida_color = pick_icon(dados.get('batida'), dados.get('batida_construcao'), dados.get('batida_na'))
                 escala_icon, escala_color = pick_icon(dados.get('escala'), dados.get('escala_construcao'), dados.get('escala_na'))
@@ -437,7 +436,7 @@ with tab_dashboard:
     st.divider()
     
     # ==================== GRÁFICO DE CHAMADOS POR CLIENTE ====================
-    st.subheader("📊 Chamados por Cliente (Totalizado)")
+    st.subheader(" Chamados por Cliente (Totalizado)")
     
     # Busca todos os chamados (abertos e resolvidos) e agrupa por cliente
     from database import get_db
@@ -484,7 +483,7 @@ with tab_dashboard:
             color='Status',
             barmode='group',
             text_auto=True,
-            color_discrete_map={'abertos': '#ef4444', 'resolvidos': '#10b981'},
+            color_discrete_map={'abertos': '#9CA3AF', 'resolvidos': '#006ED2'},
             labels={'cliente': 'Cliente', 'Quantidade': 'Quantidade de Chamados'}
         )
         fig_clientes.update_layout(
@@ -669,7 +668,7 @@ with tab_checklist:
                             st.success("Classificação atualizada!")
                             st.rerun()
             
-            st.markdown("#### 📋 Categorias de Integração")
+            st.markdown("####  Categorias de Integração")
             st.caption("Selecione o status de cada categoria de integração:")
             
             # Grid de categorias
@@ -886,7 +885,7 @@ with tab_historico:
                 if chamado['observacao']:
                     st.caption(chamado['observacao'])
                 if chamado.get('resolucao'):
-                    st.markdown(f"<span style='color:#10b981'><b>Resolução:</b> {chamado['resolucao']}</span>", unsafe_allow_html=True)
+                    st.markdown(f"<span style='color:#2E6FB2'><b>Resolução:</b> {chamado['resolucao']}</span>", unsafe_allow_html=True)
                 st.caption(f"Aberto: {chamado['data_abertura']} → Resolvido: {chamado['data_resolucao']}")
             
             with col_btn1:
@@ -903,58 +902,7 @@ with tab_historico:
             
             st.divider()
 
-# ==================== ABA GERENCIAR CLIENTES ====================
-with tab_clientes:
-    st.subheader("👥 Gerenciar Clientes")
-    
-    col_add, col_list = st.columns([1, 2])
-    
-    with col_add:
-        st.markdown("### ➕ Adicionar Cliente")
-        with st.form("form_add_cliente"):
-            nome_novo = st.text_input("Nome do Cliente")
-            classificacao_novo = st.selectbox("Classificação", ["novo", "+3 meses", "+6 meses"])
-            
-            if st.form_submit_button("Adicionar", use_container_width=True):
-                if nome_novo:
-                    try:
-                        adicionar_cliente(nome_novo, classificacao_novo)
-                        st.success(f"✅ {nome_novo} adicionado!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Erro: {e}")
-                else:
-                    st.warning("Digite um nome")
-    
-    with col_list:
-        st.markdown("### 📋 Lista de Clientes")
-        clientes = listar_clientes()
-        
-        busca_cli = st.text_input("🔍 Buscar cliente", key="busca_clientes")
-        
-        if busca_cli:
-            clientes = [c for c in clientes if busca_cli.lower() in c['nome'].lower()]
-        
-        st.markdown(f"**{len(clientes)} clientes cadastrados**")
-        
-        for cliente in clientes:
-            col_nome, col_btn = st.columns([4, 1])
-            
-            with col_nome:
-                st.markdown(f"• **{cliente['nome']}**")
-                st.caption(f"Classificação: {cliente.get('classificacao','novo')}")
-            
-            with col_btn:
-                # seletor rápido para alterar classificacao
-                new_class = st.selectbox("", ["novo", "+3 meses", "+6 meses"], index=["novo", "+3 meses", "+6 meses"].index(cliente.get('classificacao','novo')), key=f"class_{cliente['id']}")
-                if st.button("💾", key=f"salvar_class_{cliente['id']}"):
-                    if atualizar_classificacao(cliente['id'], new_class):
-                        st.success("Classificação atualizada!")
-                        st.rerun()
-                if st.button("🗑️", key=f"excluir_cli_{cliente['id']}", help="Excluir cliente e todos os seus chamados"):
-                    if excluir_cliente(cliente['id']):
-                        st.success(f"❌ {cliente['nome']} excluído!")
-                        st.rerun()
+
 
 # ==================== RODAPÉ ====================
 st.divider()
