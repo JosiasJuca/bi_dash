@@ -35,7 +35,7 @@ if not st.session_state['autenticado']:
     st.stop()
 
 # ==================== CONFIGURAÇÃO ====================
-st.set_page_config(page_title="BI Integrações v2", layout="wide", page_icon="📊")
+st.set_page_config(page_title="BI Integrações", layout="wide", page_icon="📊")
 
 # Inicializa o banco na primeira execução
 init_db()
@@ -46,17 +46,19 @@ STATUS_OPTIONS = [
     "2. Implantado refazendo",
     "3. Novo cliente sem integração",
     "4. Implantado sem integração",
-    "5. Status Normal"
+    "5. Status Normal",
+    "6. Integração em construção"
 ]
 
 CATEGORIAS = ["Batida", "Escala", "Feriados", "Funcionários", "PDV", "Venda", "SSO", "Geral"]
 
 CORES_STATUS = {
-    "1. Implantado com problema": "#f59e0b",
+    "1. Implantado com problema": "#ff8800",
     "2. Implantado refazendo": "#3b82f6",
     "3. Novo cliente sem integração": "#ef4444",
     "4. Implantado sem integração": "#f87171",
-    "5. Status Normal": "#10b981"
+    "5. Status Normal": "#10b981",
+    "6. Integração em construção": "#727170"
 }
 
 # ==================== ESTILOS ====================
@@ -260,10 +262,10 @@ with tab_dashboard:
     with col_tab2:
         st.subheader("⏳ Checklist de Integração")
         
-        # Busca clientes sem integração (status 3 e 4)
+        # Busca clientes sem integração (status 3 e 4) e também chamados "Em construção" (status 6)
         chamados_sem_int = [
             c for c in todos_chamados
-            if 'sem integração' in c['status'].lower()
+            if ('sem integração' in (c.get('status') or '').lower()) or ('constru' in (c.get('status') or '').lower())
         ]
         
         # Aplica filtros
@@ -275,7 +277,7 @@ with tab_dashboard:
         ]
         
         if chamados_sem_int_filtrados:
-            # Agrupa por cliente
+            # Agrupa por cliente e detecta se a categoria está em construção (status '6' ou texto)
             clientes_checklist = {}
             for chamado in chamados_sem_int_filtrados:
                 cliente = chamado['cliente']
@@ -284,30 +286,61 @@ with tab_dashboard:
                         'status': chamado['status'],
                         'id': chamado['id'],
                         'batida': False,
+                        'batida_construcao': False,
                         'escala': False,
+                        'escala_construcao': False,
                         'feriados': False,
+                        'feriados_construcao': False,
                         'funcionarios': False,
+                        'funcionarios_construcao': False,
                         'pdv': False,
+                        'pdv_construcao': False,
                         'venda': False,
-                        'sso': False
+                        'venda_construcao': False,
+                        'sso': False,
+                        'sso_construcao': False
                     }
-                # Marca a categoria como concluída
-                cat = chamado['categoria'].lower()
+                # Marca a categoria como concluída ou em construção
+                cat = (chamado.get('categoria') or '').lower()
+                status_lower = (chamado.get('status') or '').lower()
+                is_construcao = 'constru' in status_lower or status_lower.startswith('6')
+
                 if 'batida' in cat:
-                    clientes_checklist[cliente]['batida'] = True
+                    if is_construcao:
+                        clientes_checklist[cliente]['batida_construcao'] = True
+                    else:
+                        clientes_checklist[cliente]['batida'] = True
                 elif 'escala' in cat:
-                    clientes_checklist[cliente]['escala'] = True
+                    if is_construcao:
+                        clientes_checklist[cliente]['escala_construcao'] = True
+                    else:
+                        clientes_checklist[cliente]['escala'] = True
                 elif 'feriado' in cat:
-                    clientes_checklist[cliente]['feriados'] = True
+                    if is_construcao:
+                        clientes_checklist[cliente]['feriados_construcao'] = True
+                    else:
+                        clientes_checklist[cliente]['feriados'] = True
                 elif 'funcionario' in cat or 'funcionário' in cat:
-                    clientes_checklist[cliente]['funcionarios'] = True
+                    if is_construcao:
+                        clientes_checklist[cliente]['funcionarios_construcao'] = True
+                    else:
+                        clientes_checklist[cliente]['funcionarios'] = True
                 elif 'pdv' in cat:
-                    clientes_checklist[cliente]['pdv'] = True
+                    if is_construcao:
+                        clientes_checklist[cliente]['pdv_construcao'] = True
+                    else:
+                        clientes_checklist[cliente]['pdv'] = True
                 elif 'venda' in cat:
-                    clientes_checklist[cliente]['venda'] = True
+                    if is_construcao:
+                        clientes_checklist[cliente]['venda_construcao'] = True
+                    else:
+                        clientes_checklist[cliente]['venda'] = True
                 elif 'sso' in cat:
-                    clientes_checklist[cliente]['sso'] = True
-            
+                    if is_construcao:
+                        clientes_checklist[cliente]['sso_construcao'] = True
+                    else:
+                        clientes_checklist[cliente]['sso'] = True
+
             # Exibe a tabela
             table_html = '<div style="background: #f5f5f5; border-radius: 10px; padding: 15px; border: 1px solid #e0e0e0;">'
             table_html += '<table style="width: 100%; border-collapse: collapse;">'
@@ -322,20 +355,43 @@ with tab_dashboard:
             table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">VENDA</th>'
             table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">SSO</th>'
             table_html += '</tr></thead><tbody>'
-            
+
             for cliente, dados in clientes_checklist.items():
+                # Se categoria em construção -> mostra ícone de construção (🛠️)
+                def pick_icon(has_chamado, construcao, na=False):
+                    # Ordem de prioridade:
+                    # 1) Em construção -> mostrar 🛠️
+                    # 2) Existe chamado (qualquer) -> mostrar ✗ (problema pendente)
+                    # 3) N/A -> mostrar 'N/A'
+                    # 4) Sem chamado -> mostrar ✓ (ok)
+                    if construcao:
+                        return ('🛠️', '#d97706')
+                    if has_chamado:
+                        return ('✗', '#FF0000')
+                    if na:
+                        return ('N/A', '#000000')
+                    return ('✓', '#015524')
+
+                batida_icon, batida_color = pick_icon(dados.get('batida'), dados.get('batida_construcao'))
+                escala_icon, escala_color = pick_icon(dados.get('escala'), dados.get('escala_construcao'))
+                feriados_icon, feriados_color = pick_icon(dados.get('feriados'), dados.get('feriados_construcao'), na=True)
+                funcionarios_icon, funcionarios_color = pick_icon(dados.get('funcionarios'), dados.get('funcionarios_construcao'))
+                pdv_icon, pdv_color = pick_icon(dados.get('pdv'), dados.get('pdv_construcao'))
+                venda_icon, venda_color = pick_icon(dados.get('venda'), dados.get('venda_construcao'))
+                sso_icon, sso_color = pick_icon(dados.get('sso'), dados.get('sso_construcao'), na=True)
+
                 table_html += '<tr style="border-bottom: 1px solid #e0e0e0;">'
                 table_html += f'<td style="padding: 10px; color: #111;">{cliente}</td>'
                 table_html += f'<td style="padding: 10px; text-align: center;">{status_badge(dados["status"])}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: {"#FF0000" if dados["batida"] else "#015524"}; font-size: 20px;">{"✗" if dados["batida"] else "✓"}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: {"#FF0000" if dados["escala"] else "#015524"}; font-size: 20px;">{"✗" if dados["escala"] else "✓"}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: {"#FF0000" if dados["feriados"] else "#000000"}; font-size: 20px;">{"✗" if dados["feriados"] else "N/A"}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: {"#FF0000" if dados["funcionarios"] else "#015524"}; font-size: 20px;">{"✗" if dados["funcionarios"] else "✓"}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: {"#FF0000" if dados["pdv"] else "#015524"}; font-size: 20px;">{"✗" if dados["pdv"] else "✓"}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: {"#FF0000" if dados["venda"] else "#015524"}; font-size: 20px;">{"✗" if dados["venda"] else "✓"}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: {"#FF0000" if dados["sso"] else "#000000"}; font-size: 20px;">{"✗" if dados["sso"] else "N/A"}</td>'
+                table_html += f'<td style="padding: 10px; text-align: center; color: {batida_color}; font-size: 20px;">{batida_icon}</td>'
+                table_html += f'<td style="padding: 10px; text-align: center; color: {escala_color}; font-size: 20px;">{escala_icon}</td>'
+                table_html += f'<td style="padding: 10px; text-align: center; color: {feriados_color}; font-size: 20px;">{feriados_icon}</td>'
+                table_html += f'<td style="padding: 10px; text-align: center; color: {funcionarios_color}; font-size: 20px;">{funcionarios_icon}</td>'
+                table_html += f'<td style="padding: 10px; text-align: center; color: {pdv_color}; font-size: 20px;">{pdv_icon}</td>'
+                table_html += f'<td style="padding: 10px; text-align: center; color: {venda_color}; font-size: 20px;">{venda_icon}</td>'
+                table_html += f'<td style="padding: 10px; text-align: center; color: {sso_color}; font-size: 20px;">{sso_icon}</td>'
                 table_html += '</tr>'
-            
+
             table_html += '</tbody></table></div>'
             st.markdown(table_html, unsafe_allow_html=True)
         else:
@@ -429,7 +485,7 @@ with tab_chamados:
                 if cliente_sel == "+ Novo Cliente":
                     novo_cliente_nome = st.text_input("Nome do Novo Cliente")
                 
-                status_sel = st.selectbox("Status", STATUS_OPTIONS[:-1])  # Exceto "Status Normal"
+                status_sel = st.selectbox("Status", [s for s in STATUS_OPTIONS if s != "5. Status Normal"])  # Exceto "5. Status Normal"
                 
             with col_f2:
                 categoria_sel = st.selectbox("Categoria", CATEGORIAS)

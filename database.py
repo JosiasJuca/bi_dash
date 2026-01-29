@@ -217,11 +217,13 @@ def obter_estatisticas():
         cursor.execute("SELECT COUNT(*) as total FROM chamados WHERE data_resolucao IS NOT NULL")
         chamados_resolvidos = cursor.fetchone()['total']
         
-        # Clientes sem integração
+        # Clientes sem integração (inclui status que contenham 'sem integração' ou 'Em construção')
         cursor.execute("""
             SELECT COUNT(DISTINCT cliente_id) as total 
             FROM chamados 
             WHERE status LIKE '%sem integração%'
+               OR status LIKE '%constru%'
+               OR status = '6. Integração em construção'
         """)
         sem_integracao = cursor.fetchone()['total']
         
