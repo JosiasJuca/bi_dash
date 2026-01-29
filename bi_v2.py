@@ -6,35 +6,14 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import date
+import os
 from database import (
     init_db, adicionar_cliente, adicionar_chamado, resolver_chamado, 
     reabrir_chamado, listar_clientes, listar_chamados_abertos, 
     listar_chamados_resolvidos, obter_estatisticas, buscar_cliente_por_nome,
-    atualizar_checklist, obter_checklist, excluir_chamado, excluir_cliente,
-    atualizar_classificacao, atualizar_cliente_checklist, limpar_checklist_cliente
+    excluir_chamado, excluir_cliente, atualizar_classificacao, 
+    atualizar_cliente_checklist, limpar_checklist_cliente, listar_chamados_problemas
 )
-import os
-
-# # ==================== PROTEÇÃO POR SENHA ====================
-# if 'autenticado' not in st.session_state:
-#     st.session_state['autenticado'] = False
-
-# SENHA_CORRETA = os.environ.get('DASH_SENHA')
-# if not SENHA_CORRETA:
-#     st.error('A senha do dashboard não está configurada. Defina a variável de ambiente DASH_SENHA.')
-#     st.stop()
-
-# if not st.session_state['autenticado']:
-#     st.title('🔒 Acesso Restrito')
-#     senha = st.text_input('Digite a senha para acessar o dashboard:', type='password')
-#     if st.button('Entrar'):
-#         if senha == SENHA_CORRETA:
-#             st.session_state['autenticado'] = True
-#             st.rerun()
-#         else:
-#             st.error('Senha incorreta!')
-#     st.stop()
-
 # ==================== CONFIGURAÇÃO ====================
 st.set_page_config(page_title="BI Integrações", layout="wide", page_icon="📊")
 
@@ -281,79 +260,91 @@ with tab_dashboard:
             if ('sem integração' in (c.get('status') or '').lower()) or ('parcial' in (c.get('status') or '').lower()) or ('constru' in (c.get('status') or '').lower())
         ]
         
-        # Aplica filtros
-        chamados_sem_int_filtrados = [
-            c for c in chamados_sem_int
-            if c['status'] in status_filtro_dash and (
-                not busca_cliente_dash or busca_cliente_dash.lower() in c['cliente'].lower()
-            ) and (not class_filtro_dash or c.get('classificacao','novo') in class_filtro_dash)
-        ]
+        # Primeiro agrupa TODOS os chamados por cliente (sem filtro de status ainda)
+        clientes_checklist_completo = {}
+        for chamado in chamados_sem_int:
+            cliente = chamado['cliente']
+            categoria = chamado.get('categoria', '')
+            
+            if cliente not in clientes_checklist_completo:
+                clientes_checklist_completo[cliente] = {
+                    'status_original': chamado['status'],  # Guarda o status original
+                    'id': chamado['id'],
+                    'batida': False,
+                    'batida_construcao': False,
+                    'escala': False,
+                    'escala_construcao': False,
+                    'feriados': False,
+                    'feriados_construcao': False,
+                    'funcionarios': False,
+                    'funcionarios_construcao': False,
+                    'pdv': False,
+                    'pdv_construcao': False,
+                    'venda': False,
+                    'venda_construcao': False,
+                    'sso': False,
+                    'sso_construcao': False
+                }
+            
+            # Se é categoria "Geral", sempre usa esse status (prioridade máxima)
+            if categoria == "Geral":
+                clientes_checklist_completo[cliente]['status_original'] = chamado['status']
+            
+            # Marca a categoria como concluída ou em construção
+            cat = (chamado.get('categoria') or '').lower()
+            status_lower = (chamado.get('status') or '').lower()
+            is_construcao = 'constru' in status_lower or status_lower.startswith('6')
+
+            if 'batida' in cat:
+                if is_construcao:
+                    clientes_checklist_completo[cliente]['batida_construcao'] = True
+                else:
+                    clientes_checklist_completo[cliente]['batida'] = True
+            elif 'escala' in cat:
+                if is_construcao:
+                    clientes_checklist_completo[cliente]['escala_construcao'] = True
+                else:
+                    clientes_checklist_completo[cliente]['escala'] = True
+            elif 'feriado' in cat:
+                if is_construcao:
+                    clientes_checklist_completo[cliente]['feriados_construcao'] = True
+                else:
+                    clientes_checklist_completo[cliente]['feriados'] = True
+            elif 'funcionario' in cat or 'funcionário' in cat:
+                if is_construcao:
+                    clientes_checklist_completo[cliente]['funcionarios_construcao'] = True
+                else:
+                    clientes_checklist_completo[cliente]['funcionarios'] = True
+            elif 'pdv' in cat:
+                if is_construcao:
+                    clientes_checklist_completo[cliente]['pdv_construcao'] = True
+                else:
+                    clientes_checklist_completo[cliente]['pdv'] = True
+            elif 'venda' in cat:
+                if is_construcao:
+                    clientes_checklist_completo[cliente]['venda_construcao'] = True
+                else:
+                    clientes_checklist_completo[cliente]['venda'] = True
+            elif 'sso' in cat:
+                if is_construcao:
+                    clientes_checklist_completo[cliente]['sso_construcao'] = True
+                else:
+                    clientes_checklist_completo[cliente]['sso'] = True
         
-        if chamados_sem_int_filtrados:
-            # Agrupa por cliente e detecta se a categoria está em construção (status '6' ou texto)
-            clientes_checklist = {}
-            for chamado in chamados_sem_int_filtrados:
-                cliente = chamado['cliente']
-                if cliente not in clientes_checklist:
-                    clientes_checklist[cliente] = {
-                        'status': chamado['status'],
-                        'id': chamado['id'],
-                        'batida': False,
-                        'batida_construcao': False,
-                        'escala': False,
-                        'escala_construcao': False,
-                        'feriados': False,
-                        'feriados_construcao': False,
-                        'funcionarios': False,
-                        'funcionarios_construcao': False,
-                        'pdv': False,
-                        'pdv_construcao': False,
-                        'venda': False,
-                        'venda_construcao': False,
-                        'sso': False,
-                        'sso_construcao': False
-                    }
-                # Marca a categoria como concluída ou em construção
-                cat = (chamado.get('categoria') or '').lower()
-                status_lower = (chamado.get('status') or '').lower()
-                is_construcao = 'constru' in status_lower or status_lower.startswith('6')
-
-                if 'batida' in cat:
-                    if is_construcao:
-                        clientes_checklist[cliente]['batida_construcao'] = True
-                    else:
-                        clientes_checklist[cliente]['batida'] = True
-                elif 'escala' in cat:
-                    if is_construcao:
-                        clientes_checklist[cliente]['escala_construcao'] = True
-                    else:
-                        clientes_checklist[cliente]['escala'] = True
-                elif 'feriado' in cat:
-                    if is_construcao:
-                        clientes_checklist[cliente]['feriados_construcao'] = True
-                    else:
-                        clientes_checklist[cliente]['feriados'] = True
-                elif 'funcionario' in cat or 'funcionário' in cat:
-                    if is_construcao:
-                        clientes_checklist[cliente]['funcionarios_construcao'] = True
-                    else:
-                        clientes_checklist[cliente]['funcionarios'] = True
-                elif 'pdv' in cat:
-                    if is_construcao:
-                        clientes_checklist[cliente]['pdv_construcao'] = True
-                    else:
-                        clientes_checklist[cliente]['pdv'] = True
-                elif 'venda' in cat:
-                    if is_construcao:
-                        clientes_checklist[cliente]['venda_construcao'] = True
-                    else:
-                        clientes_checklist[cliente]['venda'] = True
-                elif 'sso' in cat:
-                    if is_construcao:
-                        clientes_checklist[cliente]['sso_construcao'] = True
-                    else:
-                        clientes_checklist[cliente]['sso'] = True
-
+        # AGORA aplica os filtros (remove clientes cujo status não está no filtro)
+        clientes_checklist = {}
+        for cliente, dados in clientes_checklist_completo.items():
+            # Pega o chamado para verificar classificação
+            chamado_cliente = next((c for c in chamados_sem_int if c['cliente'] == cliente), None)
+            
+            # Aplica filtros
+            if dados['status_original'] in status_filtro_dash and (
+                not busca_cliente_dash or busca_cliente_dash.lower() in cliente.lower()
+            ) and (chamado_cliente and (not class_filtro_dash or chamado_cliente.get('classificacao','novo') in class_filtro_dash)):
+                dados['status'] = dados['status_original']  # Mantém o status original
+                clientes_checklist[cliente] = dados
+        
+        if clientes_checklist:
             # Exibe a tabela
             table_html = '<div style="background: #f5f5f5; border-radius: 10px; padding: 15px; border: 1px solid #e0e0e0;">'
             table_html += '<table style="width: 100%; border-collapse: collapse;">'
@@ -718,8 +709,8 @@ with tab_chamados:
     
     st.divider()
     
-    # Lista de chamados abertos
-    chamados = listar_chamados_abertos()
+    # Lista de chamados abertos (apenas status 1 e 2)
+    chamados = listar_chamados_problemas()
     
     if not chamados:
         st.info("🎉 Nenhum chamado aberto! Tudo funcionando perfeitamente.")

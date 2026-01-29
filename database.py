@@ -58,46 +58,12 @@ def init_db():
             )
         """)
         
-        # Tabela de checklist (integrações por cliente)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS checklist (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                cliente_id INTEGER NOT NULL,
-                batida BOOLEAN DEFAULT 0,
-                escala BOOLEAN DEFAULT 0,
-                feriados BOOLEAN DEFAULT 0,
-                funcionarios BOOLEAN DEFAULT 0,
-                pdv BOOLEAN DEFAULT 0,
-                venda BOOLEAN DEFAULT 0,
-                sso BOOLEAN DEFAULT 0,
-                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (cliente_id) REFERENCES clientes(id),
-                UNIQUE(cliente_id)
-            )
-        """)
-        
         # Índices para performance
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chamados_cliente ON chamados(cliente_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chamados_status ON chamados(status)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chamados_categoria ON chamados(categoria)")
-        # Garante compatibilidade: se coluna status_original, resolucao ou classificacao não existir em DBs antigos, adiciona
-        cursor.execute("PRAGMA table_info(chamados)")
-        cols = [r[1] for r in cursor.fetchall()]
-        if 'status_original' not in cols:
-            cursor.execute("ALTER TABLE chamados ADD COLUMN status_original TEXT")
-        if 'resolucao' not in cols:
-            cursor.execute("ALTER TABLE chamados ADD COLUMN resolucao TEXT")
-        # Clientes: compatibilidade para banco antigo que não tinha classificacao ou atualizado_em
-        cursor.execute("PRAGMA table_info(clientes)")
-        cols_cli = [r[1] for r in cursor.fetchall()]
-        if 'classificacao' not in cols_cli:
-            cursor.execute("ALTER TABLE clientes ADD COLUMN classificacao TEXT DEFAULT 'novo'")
-        if 'atualizado_em' not in cols_cli:
-            # Não usamos DEFAULT CURRENT_TIMESTAMP no ALTER TABLE (algumas versões SQLite reclamam).
-            cursor.execute("ALTER TABLE clientes ADD COLUMN atualizado_em TIMESTAMP")
-            cursor.execute("UPDATE clientes SET atualizado_em = CURRENT_TIMESTAMP WHERE atualizado_em IS NULL")
         
-        print("✅ Banco de dados inicializado com sucesso!")
+        print("✅ Banco de dados inicializado!")
 
 # ==================== FUNÇÕES DE CLIENTE ====================
 
@@ -179,7 +145,7 @@ def reabrir_chamado(chamado_id, status_original="1. Implantado com problema"):
         """, (target_status, chamado_id))
 
 def listar_chamados_abertos():
-    """Lista todos os chamados não resolvidos"""
+    """Lista todos os chamados não resolvidos (todos os status)"""
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -188,6 +154,21 @@ def listar_chamados_abertos():
             FROM chamados ch
             JOIN clientes c ON ch.cliente_id = c.id
             WHERE ch.data_resolucao IS NULL OR ch.data_resolucao = ''
+            ORDER BY ch.data_abertura DESC
+        """)
+        return [dict(row) for row in cursor.fetchall()]
+
+def listar_chamados_problemas():
+    """Lista apenas chamados com problemas (status 1 e 2)"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT c.id, c.nome as cliente, c.classificacao as classificacao, ch.id as chamado_id, ch.status, 
+                   ch.categoria, ch.observacao, ch.data_abertura, ch.data_resolucao
+            FROM chamados ch
+            JOIN clientes c ON ch.cliente_id = c.id
+            WHERE (ch.data_resolucao IS NULL OR ch.data_resolucao = '')
+            AND ch.status IN ('1. Implantado com problema', '2. Implantado refazendo')
             ORDER BY ch.data_abertura DESC
         """)
         return [dict(row) for row in cursor.fetchall()]
@@ -227,7 +208,7 @@ def obter_estatisticas():
         cursor.execute("""
             SELECT COUNT(*) as total FROM chamados 
             WHERE status != '5. Status Normal'
-                AND status NOT IN ('3. Cliente sem integração', '4. Integração Parcial')
+                AND status NOT IN ('3. Cliente sem integração', '4. Integração Parcial', '6. Integração em construção')
         """)
         chamados_abertos = cursor.fetchone()['total']
         
@@ -281,43 +262,7 @@ def obter_estatisticas():
             'por_categoria': por_categoria
         }
 
-# ==================== FUNÇÕES DE CHECKLIST ====================
-
-def atualizar_checklist(cliente_id, **kwargs):
-    """Atualiza o checklist de um cliente"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        
-        # Verifica se já existe checklist para o cliente
-        cursor.execute("SELECT id FROM checklist WHERE cliente_id = ?", (cliente_id,))
-        existe = cursor.fetchone()
-        
-        if existe:
-            # Update
-            campos = ", ".join([f"{k} = ?" for k in kwargs.keys()])
-            valores = list(kwargs.values()) + [cliente_id]
-            cursor.execute(f"""
-                UPDATE checklist 
-                SET {campos}, atualizado_em = CURRENT_TIMESTAMP
-                WHERE cliente_id = ?
-            """, valores)
-        else:
-            # Insert
-            campos = ", ".join(kwargs.keys())
-            placeholders = ", ".join(["?" for _ in kwargs])
-            valores = list(kwargs.values())
-            cursor.execute(f"""
-                INSERT INTO checklist (cliente_id, {campos})
-                VALUES (?, {placeholders})
-            """, [cliente_id] + valores)
-
-def obter_checklist(cliente_id):
-    """Obtém o checklist de um cliente"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM checklist WHERE cliente_id = ?", (cliente_id,))
-        row = cursor.fetchone()
-        return dict(row) if row else None
+# ==================== FUNÇÕES DE GERENCIAMENTO DE CHECKLIST ==
 
 def excluir_chamado(chamado_id):
     """Exclui um chamado do sistema"""
@@ -332,25 +277,9 @@ def excluir_cliente(cliente_id):
         cursor = conn.cursor()
         # Exclui chamados do cliente
         cursor.execute("DELETE FROM chamados WHERE cliente_id = ?", (cliente_id,))
-        # Exclui checklist do cliente
-        cursor.execute("DELETE FROM checklist WHERE cliente_id = ?", (cliente_id,))
         # Exclui o cliente
         cursor.execute("DELETE FROM clientes WHERE id = ?", (cliente_id,))
         return cursor.rowcount > 0
-
-def listar_checklists_pendentes():
-    """Lista clientes com integrações pendentes"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT c.nome as cliente, ch.*
-            FROM checklist ch
-            JOIN clientes c ON ch.cliente_id = c.id
-            WHERE batida = 0 OR escala = 0 OR feriados = 0 
-               OR funcionarios = 0 OR pdv = 0 OR venda = 0 OR sso = 0
-            ORDER BY c.nome
-        """)
-        return [dict(row) for row in cursor.fetchall()]
 
 def atualizar_cliente_checklist(cliente_id, status_geral, categorias):
     """
@@ -373,6 +302,18 @@ def atualizar_cliente_checklist(cliente_id, status_geral, categorias):
             AND status IN ('3. Cliente sem integração', '4. Integração Parcial', '6. Integração em construção')
         """, (cliente_id,))
         
+        # SEMPRE cria um chamado "Geral" com o status escolhido pelo usuário
+        cursor.execute("""
+            INSERT INTO chamados (cliente_id, status, categoria, observacao, data_abertura)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            cliente_id, 
+            status_geral, 
+            "Geral", 
+            "Status geral do cliente",
+            datetime.now().date().isoformat()
+        ))
+        
         # Para cada categoria, cria chamado se necessário
         for categoria, estado in categorias.items():
             # N/A ou OK não precisa de chamado
@@ -380,9 +321,14 @@ def atualizar_cliente_checklist(cliente_id, status_geral, categorias):
                 continue
             
             # Determina o status baseado no estado
-            if estado == "🛠️ Em Construção":
+            if "🛠" in estado or "Em Construção" in estado:
+                # Se tem emoji de martelo ou texto "Em Construção", é status 6
                 status_cat = "6. Integração em construção"
-            else:  # "✗ Problema"
+            elif "✗" in estado or "Problema" in estado:
+                # Se tem X ou texto "Problema", usa o status geral (3 ou 4)
+                status_cat = status_geral
+            else:
+                # Fallback: usa o status geral
                 status_cat = status_geral
             
             # Cria o chamado
