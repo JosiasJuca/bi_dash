@@ -145,11 +145,27 @@ def reabrir_chamado(chamado_id, status_original="1. Implantado com problema"):
         """, (target_status, chamado_id))
 
 def listar_chamados_abertos():
-    """Lista todos os chamados não resolvidos (todos os status)"""
+    """Lista todos os chamados não resolvidos (todos os status, exclui Geral e N/A)"""
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
             SELECT c.id, c.nome as cliente, c.classificacao as classificacao, ch.id as chamado_id, ch.status, 
+                   ch.categoria, ch.observacao, ch.data_abertura, ch.data_resolucao
+            FROM chamados ch
+            JOIN clientes c ON ch.cliente_id = c.id
+            WHERE (ch.data_resolucao IS NULL OR ch.data_resolucao = '')
+                AND ch.categoria != 'Geral'
+                AND ch.observacao != 'N/A'
+            ORDER BY ch.data_abertura DESC
+        """)
+        return [dict(row) for row in cursor.fetchall()]
+
+def listar_chamados_abertos_completos():
+    """Lista todos os chamados não resolvidos (retorna também chamados 'Geral' e N/A)."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT c.id, c.nome as cliente, c.classificacao as classificacao, ch.id as id, ch.status, 
                    ch.categoria, ch.observacao, ch.data_abertura, ch.data_resolucao
             FROM chamados ch
             JOIN clientes c ON ch.cliente_id = c.id
@@ -159,7 +175,7 @@ def listar_chamados_abertos():
         return [dict(row) for row in cursor.fetchall()]
 
 def listar_chamados_problemas():
-    """Lista apenas chamados com problemas (status 1 e 2)"""
+    """Lista apenas chamados com problemas (status 1 e 2, exclui Geral e N/A)"""
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -169,12 +185,14 @@ def listar_chamados_problemas():
             JOIN clientes c ON ch.cliente_id = c.id
             WHERE (ch.data_resolucao IS NULL OR ch.data_resolucao = '')
             AND ch.status IN ('1. Implantado com problema', '2. Implantado refazendo')
+            AND ch.categoria != 'Geral'
+            AND ch.observacao != 'N/A'
             ORDER BY ch.data_abertura DESC
         """)
         return [dict(row) for row in cursor.fetchall()]
 
 def listar_chamados_resolvidos():
-    """Lista todos os chamados resolvidos"""
+    """Lista todos os chamados resolvidos (exclui Geral e N/A)"""
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -183,6 +201,8 @@ def listar_chamados_resolvidos():
             FROM chamados ch
             JOIN clientes c ON ch.cliente_id = c.id
             WHERE ch.data_resolucao IS NOT NULL
+                AND ch.categoria != 'Geral'
+                AND ch.observacao != 'N/A'
             ORDER BY ch.data_resolucao DESC
         """)
         return [dict(row) for row in cursor.fetchall()]
@@ -204,16 +224,18 @@ def obter_estatisticas():
         cursor.execute("SELECT COUNT(*) as total FROM clientes WHERE ativo = 1")
         total_clientes = cursor.fetchone()['total']
         
-        # Chamados abertos
+        # Chamados abertos (exclui categoria Geral e N/A)
         cursor.execute("""
             SELECT COUNT(*) as total FROM chamados 
             WHERE status != '5. Status Normal'
                 AND status NOT IN ('3. Cliente sem integração', '4. Integração Parcial', '6. Integração em construção')
+                AND categoria != 'Geral'
+                AND observacao != 'N/A'
         """)
         chamados_abertos = cursor.fetchone()['total']
         
-        # Chamados resolvidos
-        cursor.execute("SELECT COUNT(*) as total FROM chamados WHERE data_resolucao IS NOT NULL")
+        # Chamados resolvidos (exclui categoria Geral e N/A)
+        cursor.execute("SELECT COUNT(*) as total FROM chamados WHERE data_resolucao IS NOT NULL AND categoria != 'Geral' AND observacao != 'N/A'")
         chamados_resolvidos = cursor.fetchone()['total']
         
         # Clientes sem integração (inclui status que contenham 'sem integração', 'parcial' ou 'Em construção')
@@ -227,28 +249,34 @@ def obter_estatisticas():
         """)
         sem_integracao = cursor.fetchone()['total']
         
-        # Distribuição por status
+        # Distribuição por status (exclui categoria Geral e N/A)
         cursor.execute("""
             SELECT status, COUNT(*) as total 
             FROM chamados 
             WHERE status != '5. Status Normal'
+                AND categoria != 'Geral'
+                AND observacao != 'N/A'
             GROUP BY status
         """)
         por_status = {row['status']: row['total'] for row in cursor.fetchall()}
         
-        # Distribuição por categoria
+        # Distribuição por categoria (exclui Geral e N/A)
         cursor.execute("""
               SELECT categoria, 
                     SUM(CASE 
                           WHEN status IN (?, ?) 
-                              AND (data_resolucao IS NULL OR data_resolucao = '') THEN 1 
+                              AND (data_resolucao IS NULL OR data_resolucao = '')
+                              AND observacao != 'N/A' THEN 1 
                           ELSE 0 END) as abertos,
                     SUM(CASE 
                           WHEN data_resolucao IS NOT NULL 
-                              AND COALESCE(status_original, status) IN (?, ?) THEN 1 
+                              AND COALESCE(status_original, status) IN (?, ?)
+                              AND observacao != 'N/A' THEN 1 
                           ELSE 0 END) as resolvidos
               FROM chamados
-              WHERE status IN (?, ?) OR COALESCE(status_original, status) IN (?, ?)
+              WHERE (status IN (?, ?) OR COALESCE(status_original, status) IN (?, ?))
+                AND categoria != 'Geral'
+                AND observacao != 'N/A'
               GROUP BY categoria
            """, status_criticos * 4)
         por_categoria = [dict(row) for row in cursor.fetchall()]
@@ -289,12 +317,12 @@ def atualizar_cliente_checklist(cliente_id, status_geral, categorias):
     Args:
         cliente_id: ID do cliente
         status_geral: Status geral (3, 4 ou 6)
-        categorias: Dict com {categoria: estado} onde estado é "✓ OK", "✗ Problema" ou "🛠️ Em Construção"
+        categorias: Dict com {categoria: estado} onde estado é "✓ OK", "✗ Problema", "🛠️ Em Construção" ou "N/A"
     """
     with get_db() as conn:
         cursor = conn.cursor()
         
-        # Remove todos os chamados abertos do tipo 3, 4 ou 6 deste cliente
+        # Remove TODOS os chamados abertos do tipo 3, 4 ou 6 deste cliente (incluindo Geral)
         cursor.execute("""
             DELETE FROM chamados 
             WHERE cliente_id = ? 
@@ -316,8 +344,22 @@ def atualizar_cliente_checklist(cliente_id, status_geral, categorias):
         
         # Para cada categoria, cria chamado se necessário
         for categoria, estado in categorias.items():
-            # N/A ou OK não precisa de chamado
-            if estado in ["N/A", "✓ OK"]:
+            # OK não precisa de chamado - pula para próxima
+            if estado == "✓ OK":
+                continue
+            
+            # N/A cria um chamado especial para aparecer no dashboard
+            if estado == "N/A":
+                cursor.execute("""
+                    INSERT INTO chamados (cliente_id, status, categoria, observacao, data_abertura)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (
+                    cliente_id, 
+                    status_geral, 
+                    categoria, 
+                    "N/A",
+                    datetime.now().date().isoformat()
+                ))
                 continue
             
             # Determina o status baseado no estado
@@ -355,6 +397,25 @@ def limpar_checklist_cliente(cliente_id):
         """, (cliente_id,))
         return cursor.rowcount
 
-if __name__ == "__main__":
-    # Inicializa o banco quando executado diretamente
-    init_db()
+def deletar_chamados_por_status(status):
+    """Deleta todos os chamados com um status específico"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            DELETE FROM chamados 
+            WHERE status = ?
+            AND (data_resolucao IS NULL OR data_resolucao = '')
+        """, (status,))
+        return cursor.rowcount
+
+def deletar_chamados_por_cliente(cliente_id):
+    """Deleta todos os chamados abertos de um cliente específico"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            DELETE FROM chamados 
+            WHERE cliente_id = ?
+            AND (data_resolucao IS NULL OR data_resolucao = '')
+        """, (cliente_id,))
+        return cursor.rowcount
+

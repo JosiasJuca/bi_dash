@@ -12,7 +12,8 @@ from database import (
     reabrir_chamado, listar_clientes, listar_chamados_abertos, 
     listar_chamados_resolvidos, obter_estatisticas, buscar_cliente_por_nome,
     excluir_chamado, excluir_cliente, atualizar_classificacao, 
-    atualizar_cliente_checklist, limpar_checklist_cliente, listar_chamados_problemas
+    atualizar_cliente_checklist, limpar_checklist_cliente, listar_chamados_problemas,
+    deletar_chamados_por_status, deletar_chamados_por_cliente
 )
 # ==================== CONFIGURAÇÃO ====================
 st.set_page_config(page_title="BI Integrações", layout="wide", page_icon="📊")
@@ -261,8 +262,11 @@ with tab_dashboard:
         ]
         
         # Primeiro agrupa TODOS os chamados por cliente (sem filtro de status ainda)
+        # Usar chamados completos (inclui 'Geral') para respeitar o status geral salvo
+        from database import listar_chamados_abertos_completos
+        chamados_completos = listar_chamados_abertos_completos()
         clientes_checklist_completo = {}
-        for chamado in chamados_sem_int:
+        for chamado in chamados_completos:
             cliente = chamado['cliente']
             categoria = chamado.get('categoria', '')
             
@@ -278,55 +282,84 @@ with tab_dashboard:
                     'feriados_construcao': False,
                     'funcionarios': False,
                     'funcionarios_construcao': False,
+                    'funcionarios_na': False,
                     'pdv': False,
                     'pdv_construcao': False,
+                    'pdv_na': False,
                     'venda': False,
                     'venda_construcao': False,
+                    'venda_na': False,
                     'sso': False,
-                    'sso_construcao': False
+                    'sso_construcao': False,
+                    'sso_na': False,
+                    'batida': False,
+                    'batida_construcao': False,
+                    'batida_na': False,
+                    'escala': False,
+                    'escala_construcao': False,
+                    'escala_na': False,
+                    'feriados': False,
+                    'feriados_construcao': False,
+                    'feriados_na': False
                 }
             
             # Se é categoria "Geral", sempre usa esse status (prioridade máxima)
             if categoria == "Geral":
                 clientes_checklist_completo[cliente]['status_original'] = chamado['status']
             
-            # Marca a categoria como concluída ou em construção
+            # Marca a categoria como concluída, em construção ou N/A
             cat = (chamado.get('categoria') or '').lower()
             status_lower = (chamado.get('status') or '').lower()
+            observacao = (chamado.get('observacao') or '').strip()
             is_construcao = 'constru' in status_lower or status_lower.startswith('6')
+            is_na = observacao == 'N/A'
 
             if 'batida' in cat:
-                if is_construcao:
+                if is_na:
+                    clientes_checklist_completo[cliente]['batida_na'] = True
+                elif is_construcao:
                     clientes_checklist_completo[cliente]['batida_construcao'] = True
                 else:
                     clientes_checklist_completo[cliente]['batida'] = True
             elif 'escala' in cat:
-                if is_construcao:
+                if is_na:
+                    clientes_checklist_completo[cliente]['escala_na'] = True
+                elif is_construcao:
                     clientes_checklist_completo[cliente]['escala_construcao'] = True
                 else:
                     clientes_checklist_completo[cliente]['escala'] = True
             elif 'feriado' in cat:
-                if is_construcao:
+                if is_na:
+                    clientes_checklist_completo[cliente]['feriados_na'] = True
+                elif is_construcao:
                     clientes_checklist_completo[cliente]['feriados_construcao'] = True
                 else:
                     clientes_checklist_completo[cliente]['feriados'] = True
             elif 'funcionario' in cat or 'funcionário' in cat:
-                if is_construcao:
+                if is_na:
+                    clientes_checklist_completo[cliente]['funcionarios_na'] = True
+                elif is_construcao:
                     clientes_checklist_completo[cliente]['funcionarios_construcao'] = True
                 else:
                     clientes_checklist_completo[cliente]['funcionarios'] = True
             elif 'pdv' in cat:
-                if is_construcao:
+                if is_na:
+                    clientes_checklist_completo[cliente]['pdv_na'] = True
+                elif is_construcao:
                     clientes_checklist_completo[cliente]['pdv_construcao'] = True
                 else:
                     clientes_checklist_completo[cliente]['pdv'] = True
             elif 'venda' in cat:
-                if is_construcao:
+                if is_na:
+                    clientes_checklist_completo[cliente]['venda_na'] = True
+                elif is_construcao:
                     clientes_checklist_completo[cliente]['venda_construcao'] = True
                 else:
                     clientes_checklist_completo[cliente]['venda'] = True
             elif 'sso' in cat:
-                if is_construcao:
+                if is_na:
+                    clientes_checklist_completo[cliente]['sso_na'] = True
+                elif is_construcao:
                     clientes_checklist_completo[cliente]['sso_construcao'] = True
                 else:
                     clientes_checklist_completo[cliente]['sso'] = True
@@ -361,28 +394,28 @@ with tab_dashboard:
             table_html += '</tr></thead><tbody>'
 
             for cliente, dados in clientes_checklist.items():
-                # Se categoria em construção -> mostra ícone de construção (🛠️)
-                def pick_icon(has_chamado, construcao, na=False):
+                # Função para escolher ícone baseado nos estados
+                def pick_icon(has_chamado, construcao, na):
                     # Ordem de prioridade:
-                    # 1) Em construção -> mostrar 🛠️
-                    # 2) Existe chamado (qualquer) -> mostrar ✗ (problema pendente)
-                    # 3) N/A -> mostrar 'N/A'
+                    # 1) N/A -> mostrar 'N/A'
+                    # 2) Em construção -> mostrar 🛠️
+                    # 3) Existe chamado (qualquer) -> mostrar ✗ (problema pendente)
                     # 4) Sem chamado -> mostrar ✓ (ok)
+                    if na:
+                        return ('N/A', '#888888')
                     if construcao:
                         return ('🛠️', '#d97706')
                     if has_chamado:
                         return ('✗', '#FF0000')
-                    if na:
-                        return ('N/A', '#000000')
                     return ('✓', '#015524')
 
-                batida_icon, batida_color = pick_icon(dados.get('batida'), dados.get('batida_construcao'))
-                escala_icon, escala_color = pick_icon(dados.get('escala'), dados.get('escala_construcao'))
-                feriados_icon, feriados_color = pick_icon(dados.get('feriados'), dados.get('feriados_construcao'), na=True)
-                funcionarios_icon, funcionarios_color = pick_icon(dados.get('funcionarios'), dados.get('funcionarios_construcao'))
-                pdv_icon, pdv_color = pick_icon(dados.get('pdv'), dados.get('pdv_construcao'))
-                venda_icon, venda_color = pick_icon(dados.get('venda'), dados.get('venda_construcao'))
-                sso_icon, sso_color = pick_icon(dados.get('sso'), dados.get('sso_construcao'), na=True)
+                batida_icon, batida_color = pick_icon(dados.get('batida'), dados.get('batida_construcao'), dados.get('batida_na'))
+                escala_icon, escala_color = pick_icon(dados.get('escala'), dados.get('escala_construcao'), dados.get('escala_na'))
+                feriados_icon, feriados_color = pick_icon(dados.get('feriados'), dados.get('feriados_construcao'), dados.get('feriados_na'))
+                funcionarios_icon, funcionarios_color = pick_icon(dados.get('funcionarios'), dados.get('funcionarios_construcao'), dados.get('funcionarios_na'))
+                pdv_icon, pdv_color = pick_icon(dados.get('pdv'), dados.get('pdv_construcao'), dados.get('pdv_na'))
+                venda_icon, venda_color = pick_icon(dados.get('venda'), dados.get('venda_construcao'), dados.get('venda_na'))
+                sso_icon, sso_color = pick_icon(dados.get('sso'), dados.get('sso_construcao'), dados.get('sso_na'))
 
                 table_html += '<tr style="border-bottom: 1px solid #e0e0e0;">'
                 table_html += f'<td style="padding: 10px; color: #111;">{cliente}</td>'
@@ -512,6 +545,58 @@ with tab_checklist:
                     st.session_state['show_add_modal'] = False
                     st.rerun()
     
+    # Seção de Administração
+    with st.expander("⚙️ Administração - Apagar Chamados"):
+        st.warning("⚠️ Cuidado! Esta ação não pode ser desfeita.")
+        
+        tab_adm1, tab_adm2 = st.tabs(["Por Status", "Por Cliente"])
+        
+        # Aba 1: Apagar por Status
+        with tab_adm1:
+            st.subheader("Apagar todos os chamados de um status")
+            col_del1, col_del2 = st.columns([2, 1])
+            
+            with col_del1:
+                status_para_apagar = st.selectbox(
+                    "Selecione o status dos chamados a apagar:",
+                    ["3. Cliente sem integração", "4. Integração Parcial", "6. Integração em construção"],
+                    key="status_apagar"
+                )
+            
+            with col_del2:
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("🗑️ Apagar por Status", use_container_width=True, key="btn_apagar_status"):
+                    total_apagado = deletar_chamados_por_status(status_para_apagar)
+                    st.success(f"✅ {total_apagado} chamados com status '{status_para_apagar}' foram apagados!")
+                    st.rerun()
+        
+        # Aba 2: Apagar por Cliente
+        with tab_adm2:
+            st.subheader("Apagar todos os chamados de um cliente")
+            col_del3, col_del4 = st.columns([2, 1])
+            
+            todos_clientes_lista = listar_clientes()
+            nomes_clientes = [c['nome'] for c in todos_clientes_lista]
+            
+            with col_del3:
+                cliente_para_apagar = st.selectbox(
+                    "Selecione o cliente:",
+                    nomes_clientes,
+                    key="cliente_apagar"
+                )
+            
+            with col_del4:
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("🗑️ Apagar por Cliente", use_container_width=True, key="btn_apagar_cliente"):
+                    cliente_selecionado = next((c for c in todos_clientes_lista if c['nome'] == cliente_para_apagar), None)
+                    if cliente_selecionado:
+                        total_apagado = deletar_chamados_por_cliente(cliente_selecionado['id'])
+                        st.success(f"✅ {total_apagado} chamados do cliente '{cliente_para_apagar}' foram apagados!")
+                        st.rerun()
+
+    
+    st.divider()
+    
     # Filtrar clientes
     if busca_checklist:
         clientes_filtrados = [c for c in todos_clientes if busca_checklist.lower() in c['nome'].lower()]
@@ -534,10 +619,16 @@ with tab_checklist:
         for row in cursor.fetchall():
             cid = row['cliente_id']
             if cid not in chamados_por_cliente:
-                chamados_por_cliente[cid] = {'status': None, 'categorias': {}}
-            # Pega o status (prioriza 3, 4, 6)
-            if row['status'] in ['3. Cliente sem integração', '4. Integração Parcial', '6. Integração em construção']:
+                chamados_por_cliente[cid] = {'status': None, 'categorias': {}, 'status_source': None}
+            # Se for chamado 'Geral', sempre define o status geral do cliente (autoridade)
+            if row['categoria'] == 'Geral':
                 chamados_por_cliente[cid]['status'] = row['status']
+                chamados_por_cliente[cid]['status_source'] = 'Geral'
+            else:
+                # Define status de categoria apenas se ainda não houver um status geral definido
+                if chamados_por_cliente[cid]['status'] is None:
+                    if row['status'] in ['3. Cliente sem integração', '4. Integração Parcial', '6. Integração em construção']:
+                        chamados_por_cliente[cid]['status'] = row['status']
             # Guarda categoria e seu chamado_id
             chamados_por_cliente[cid]['categorias'][row['categoria']] = {
                 'status': row['status'],
@@ -596,22 +687,16 @@ with tab_checklist:
                     cat_status = cat_info.get('status', '')
                     
                     # Mapear para opção do selectbox
-                    if categoria in ['Feriados', 'SSO']:
-                        opcoes = ["N/A", "✗ Problema", "🛠️ Em Construção"]
-                        if 'constru' in cat_status.lower() or cat_status == '6. Integração em construção':
-                            idx_atual = 2
-                        elif cat_status in ['3. Cliente sem integração', '4. Integração Parcial']:
-                            idx_atual = 1
-                        else:
-                            idx_atual = 0
+                    opcoes = ["✓ OK", "✗ Problema", "🛠️ Em Construção", "N/A"]
+                    
+                    if 'constru' in cat_status.lower() or cat_status == '6. Integração em construção':
+                        idx_atual = 2
+                    elif cat_status in ['3. Cliente sem integração', '4. Integração Parcial']:
+                        idx_atual = 1
+                    elif not cat_status or cat_status == '5. Status Normal':
+                        idx_atual = 0  # OK
                     else:
-                        opcoes = ["✓ OK", "✗ Problema", "🛠️ Em Construção"]
-                        if 'constru' in cat_status.lower() or cat_status == '6. Integração em construção':
-                            idx_atual = 2
-                        elif cat_status in ['3. Cliente sem integração', '4. Integração Parcial']:
-                            idx_atual = 1
-                        else:
-                            idx_atual = 0
+                        idx_atual = 0
                     
                     categorias_atualizadas[categoria] = st.selectbox(
                         categoria,

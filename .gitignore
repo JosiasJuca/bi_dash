@@ -28,3 +28,4 @@ __pycache__/
 .env
 docs
 Bi_integracao_v2/DEV_GUIDE.md
+limpar_status_3_direto.py
