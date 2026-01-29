@@ -12,27 +12,28 @@ from database import (
     listar_chamados_resolvidos, obter_estatisticas, buscar_cliente_por_nome,
     atualizar_checklist, obter_checklist, excluir_chamado, excluir_cliente
 )
+from database import atualizar_classificacao
 import os
 
-# ==================== PROTEÇÃO POR SENHA ====================
-if 'autenticado' not in st.session_state:
-    st.session_state['autenticado'] = False
+# # ==================== PROTEÇÃO POR SENHA ====================
+# if 'autenticado' not in st.session_state:
+#     st.session_state['autenticado'] = False
 
-SENHA_CORRETA = os.environ.get('DASH_SENHA')
-if not SENHA_CORRETA:
-    st.error('A senha do dashboard não está configurada. Defina a variável de ambiente DASH_SENHA.')
-    st.stop()
+# SENHA_CORRETA = os.environ.get('DASH_SENHA')
+# if not SENHA_CORRETA:
+#     st.error('A senha do dashboard não está configurada. Defina a variável de ambiente DASH_SENHA.')
+#     st.stop()
 
-if not st.session_state['autenticado']:
-    st.title('🔒 Acesso Restrito')
-    senha = st.text_input('Digite a senha para acessar o dashboard:', type='password')
-    if st.button('Entrar'):
-        if senha == SENHA_CORRETA:
-            st.session_state['autenticado'] = True
-            st.rerun()
-        else:
-            st.error('Senha incorreta!')
-    st.stop()
+# if not st.session_state['autenticado']:
+#     st.title('🔒 Acesso Restrito')
+#     senha = st.text_input('Digite a senha para acessar o dashboard:', type='password')
+#     if st.button('Entrar'):
+#         if senha == SENHA_CORRETA:
+#             st.session_state['autenticado'] = True
+#             st.rerun()
+#         else:
+#             st.error('Senha incorreta!')
+#     st.stop()
 
 # ==================== CONFIGURAÇÃO ====================
 st.set_page_config(page_title="BI Integrações", layout="wide", page_icon="📊")
@@ -196,7 +197,7 @@ with tab_dashboard:
     
     # ==================== FILTROS PARA AS TABELAS ====================
     st.subheader("🔍 Filtrar Tabelas")
-    col_filtro1, col_filtro2 = st.columns(2)
+    col_filtro1, col_filtro2, col_filtro3 = st.columns(3)
     
     # Busca todos os chamados abertos para os filtros
     todos_chamados = listar_chamados_abertos()
@@ -212,6 +213,17 @@ with tab_dashboard:
     
     with col_filtro2:
         busca_cliente_dash = st.text_input("🔍 Buscar por cliente", placeholder="Digite o nome...", key="busca_dash")
+
+    with col_filtro3:
+        classificacoes_unicas = sorted(list(set([c.get('classificacao','novo') for c in todos_chamados])))
+        if not classificacoes_unicas:
+            classificacoes_unicas = ['novo', '+3 meses', '+6 meses']
+        class_filtro_dash = st.multiselect(
+            "Filtrar por Classificação",
+            options=classificacoes_unicas,
+            default=classificacoes_unicas,
+            key="filtro_class_dash"
+        )
     
     st.divider()
     
@@ -232,7 +244,7 @@ with tab_dashboard:
             c for c in chamados_problema 
             if c['status'] in status_filtro_dash and (
                 not busca_cliente_dash or busca_cliente_dash.lower() in c['cliente'].lower()
-            )
+            ) and (not class_filtro_dash or c.get('classificacao','novo') in class_filtro_dash)
         ]
         
         if chamados_filtrados:
@@ -273,7 +285,7 @@ with tab_dashboard:
             c for c in chamados_sem_int
             if c['status'] in status_filtro_dash and (
                 not busca_cliente_dash or busca_cliente_dash.lower() in c['cliente'].lower()
-            )
+            ) and (not class_filtro_dash or c.get('classificacao','novo') in class_filtro_dash)
         ]
         
         if chamados_sem_int_filtrados:
@@ -642,11 +654,12 @@ with tab_clientes:
         st.markdown("### ➕ Adicionar Cliente")
         with st.form("form_add_cliente"):
             nome_novo = st.text_input("Nome do Cliente")
+            classificacao_novo = st.selectbox("Classificação", ["novo", "+3 meses", "+6 meses"])
             
             if st.form_submit_button("Adicionar", use_container_width=True):
                 if nome_novo:
                     try:
-                        adicionar_cliente(nome_novo)
+                        adicionar_cliente(nome_novo, classificacao_novo)
                         st.success(f"✅ {nome_novo} adicionado!")
                         st.rerun()
                     except Exception as e:
@@ -670,8 +683,15 @@ with tab_clientes:
             
             with col_nome:
                 st.markdown(f"• **{cliente['nome']}**")
+                st.caption(f"Classificação: {cliente.get('classificacao','novo')}")
             
             with col_btn:
+                # seletor rápido para alterar classificacao
+                new_class = st.selectbox("", ["novo", "+3 meses", "+6 meses"], index=["novo", "+3 meses", "+6 meses"].index(cliente.get('classificacao','novo')), key=f"class_{cliente['id']}")
+                if st.button("💾", key=f"salvar_class_{cliente['id']}"):
+                    if atualizar_classificacao(cliente['id'], new_class):
+                        st.success("Classificação atualizada!")
+                        st.rerun()
                 if st.button("🗑️", key=f"excluir_cli_{cliente['id']}", help="Excluir cliente e todos os seus chamados"):
                     if excluir_cliente(cliente['id']):
                         st.success(f"❌ {cliente['nome']} excluído!")

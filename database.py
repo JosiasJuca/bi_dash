@@ -34,7 +34,9 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nome TEXT UNIQUE NOT NULL,
                 ativo BOOLEAN DEFAULT 1,
-                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                classificacao TEXT DEFAULT 'novo',
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         
@@ -78,23 +80,32 @@ def init_db():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chamados_cliente ON chamados(cliente_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chamados_status ON chamados(status)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chamados_categoria ON chamados(categoria)")
-        # Garante compatibilidade: se coluna status_original ou resolucao não existir em DBs antigos, adiciona
+        # Garante compatibilidade: se coluna status_original, resolucao ou classificacao não existir em DBs antigos, adiciona
         cursor.execute("PRAGMA table_info(chamados)")
         cols = [r[1] for r in cursor.fetchall()]
         if 'status_original' not in cols:
             cursor.execute("ALTER TABLE chamados ADD COLUMN status_original TEXT")
         if 'resolucao' not in cols:
             cursor.execute("ALTER TABLE chamados ADD COLUMN resolucao TEXT")
+        # Clientes: compatibilidade para banco antigo que não tinha classificacao ou atualizado_em
+        cursor.execute("PRAGMA table_info(clientes)")
+        cols_cli = [r[1] for r in cursor.fetchall()]
+        if 'classificacao' not in cols_cli:
+            cursor.execute("ALTER TABLE clientes ADD COLUMN classificacao TEXT DEFAULT 'novo'")
+        if 'atualizado_em' not in cols_cli:
+            # Não usamos DEFAULT CURRENT_TIMESTAMP no ALTER TABLE (algumas versões SQLite reclamam).
+            cursor.execute("ALTER TABLE clientes ADD COLUMN atualizado_em TIMESTAMP")
+            cursor.execute("UPDATE clientes SET atualizado_em = CURRENT_TIMESTAMP WHERE atualizado_em IS NULL")
         
         print("✅ Banco de dados inicializado com sucesso!")
 
 # ==================== FUNÇÕES DE CLIENTE ====================
 
-def adicionar_cliente(nome):
+def adicionar_cliente(nome, classificacao='novo'):
     """Adiciona um novo cliente"""
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO clientes (nome) VALUES (?)", (nome.strip().title(),))
+        cursor.execute("INSERT INTO clientes (nome, classificacao) VALUES (?, ?)", (nome.strip().title(), classificacao))
         return cursor.lastrowid
 
 def listar_clientes():
@@ -172,7 +183,7 @@ def listar_chamados_abertos():
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT c.id, c.nome as cliente, ch.id as chamado_id, ch.status, 
+            SELECT c.id, c.nome as cliente, c.classificacao as classificacao, ch.id as chamado_id, ch.status, 
                    ch.categoria, ch.observacao, ch.data_abertura, ch.data_resolucao
             FROM chamados ch
             JOIN clientes c ON ch.cliente_id = c.id
@@ -186,7 +197,7 @@ def listar_chamados_resolvidos():
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT c.id, c.nome as cliente, ch.id as chamado_id, ch.status, 
+            SELECT c.id, c.nome as cliente, c.classificacao as classificacao, ch.id as chamado_id, ch.status, 
                    ch.categoria, ch.observacao, ch.resolucao, ch.data_abertura, ch.data_resolucao
             FROM chamados ch
             JOIN clientes c ON ch.cliente_id = c.id
@@ -194,6 +205,13 @@ def listar_chamados_resolvidos():
             ORDER BY ch.data_resolucao DESC
         """)
         return [dict(row) for row in cursor.fetchall()]
+
+def atualizar_classificacao(cliente_id, classificacao):
+    """Atualiza a classificacao de um cliente"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE clientes SET classificacao = ?, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?", (classificacao, cliente_id))
+        return cursor.rowcount > 0
 
 def obter_estatisticas():
     """Retorna estatísticas gerais do sistema"""
