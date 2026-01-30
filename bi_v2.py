@@ -18,26 +18,24 @@ from database import (
 
 
 # ==================== PROTEÇÃO POR SENHA ====================
-if 'autenticado' not in st.session_state:
-    st.session_state['autenticado'] = False
+# if 'autenticado' not in st.session_state:
+#     st.session_state['autenticado'] = False
 
-SENHA_CORRETA = os.environ.get('DASH_SENHA')
-if not SENHA_CORRETA:
-    st.error('A senha do dashboard não está configurada. Defina a variável de ambiente DASH_SENHA.')
-    st.stop()
+# SENHA_CORRETA = os.environ.get('DASH_SENHA')
+# if not SENHA_CORRETA:
+#     st.error('A senha do dashboard não está configurada. Defina a variável de ambiente DASH_SENHA.')
+#     st.stop()
 
-if not st.session_state['autenticado']:
-    st.title('🔒 Acesso Restrito')
-    senha = st.text_input('Digite a senha para acessar o dashboard:', type='password')
-    if st.button('Entrar'):
-        if senha == SENHA_CORRETA:
-            st.session_state['autenticado'] = True
-            st.rerun()
-        else:
-            st.error('Senha incorreta!')
-    st.stop()
-
-
+# if not st.session_state['autenticado']:
+#     st.title('🔒 Acesso Restrito')
+#     senha = st.text_input('Digite a senha para acessar o dashboard:', type='password')
+#     if st.button('Entrar'):
+#         if senha == SENHA_CORRETA:
+#             st.session_state['autenticado'] = True
+#             st.rerun()
+#         else:
+#             st.error('Senha incorreta!')
+#     st.stop()
 
 
 # ==================== CONFIGURAÇÃO ====================
@@ -55,7 +53,6 @@ STATUS_OPTIONS = [
     "4. Implantado sem integração",
     "5. Integração Parcial",
     "6. Status Normal",
-    "8. Integração em construção"
 ]
 
 CATEGORIAS = ["Batida", "Escala", "Feriados", "Funcionários", "PDV", "Venda", "SSO", "Geral"]
@@ -64,10 +61,19 @@ CORES_STATUS = {
     "1. Implantado com problema": "#143D6B",
     "2. Implantado refazendo": "#2E6FB2",
     "3. Novo cliente sem integração": "#3FA7DF",
-    "5. Implantado sem integração": "#f87171",
-    "6. Integração Parcial": "#78C6F0",
-    "7. Status Normal": "#10b981",
-    "8. Integração em construção": "#8FA9BF"
+    "5. Implantado sem integração": "#78C6F0",
+    "6. Status Normal": "#78C6F0",
+    "8. Integração em construção": "#9CA3AF",
+}
+
+#  nomes na legenda
+STATUS_LABELS = {
+    "1. Implantado com problema": "Com problema",
+    "2. Implantado refazendo": "Refazendo integração",
+    "3. Novo cliente sem integração": "Sem integração",
+    "5. Implantado sem integração": "Sem integração",
+    "7. Status Normal": "Normal",
+    "8. Integração em construção": "Em construção"
 }
 
 # ==================== ESTILOS ====================
@@ -92,16 +98,16 @@ st.markdown("""
         font-weight: bold;
         color: white;
     } 
-    .st-c1 {
-    background-color: rgb(0, 84, 163);
-     }   
+
+     .st-c1 {
+     background-color: rgb(0, 84, 163);
+      }   
 
     /* Increase table and caption sizes */
     table, th, td { font-size: 15px !important; }
     .stCaption { font-size: 13px !important; }
 </style>
 """, unsafe_allow_html=True)
-
 
 
 # Mensagens persistentes após ações que forçam rerun
@@ -164,15 +170,19 @@ with tab_dashboard:
         st.subheader(" Distribuição por Status")
         if stats['por_status']:
             df_status = pd.DataFrame([
-                {'Status': k, 'Quantidade': v} 
+                {'Status': k, 'Quantidade': v}
                 for k, v in stats['por_status'].items()
             ])
+            # Mapeia os rótulos longos para nomes amigáveis usados na legenda
+            df_status['Label'] = df_status['Status'].map(lambda s: STATUS_LABELS.get(s, s))
+            # Gera mapa de cores baseado nos labels (mantendo cores originais)
+            label_color_map = {STATUS_LABELS.get(k, k): v for k, v in CORES_STATUS.items()}
             fig_status = px.pie(
-                df_status, 
-                values='Quantidade', 
-                names='Status',
-                color='Status',
-                color_discrete_map=CORES_STATUS,
+                df_status,
+                values='Quantidade',
+                names='Label',
+                color='Label',
+                color_discrete_map=label_color_map,
                 hole=0.4
             )
             fig_status.update_layout(
