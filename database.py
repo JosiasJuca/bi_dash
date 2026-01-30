@@ -35,7 +35,7 @@ def init_db():
                 nome TEXT UNIQUE NOT NULL,
                 ativo BOOLEAN DEFAULT 1,
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                classificacao TEXT DEFAULT 'novo',
+                classificacao TEXT DEFAULT 'Guilherme',
                 atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -67,7 +67,7 @@ def init_db():
 
 # ==================== FUNÇÕES DE CLIENTE ====================
 
-def adicionar_cliente(nome, classificacao='novo'):
+def adicionar_cliente(nome, classificacao='Guilherme'):
     """Adiciona um novo cliente"""
     with get_db() as conn:
         cursor = conn.cursor()
@@ -111,14 +111,14 @@ def resolver_chamado(chamado_id, data_resolucao=None):
     
     with get_db() as conn:
         cursor = conn.cursor()
-        # preserva status original antes de marcar como '5. Status Normal'
+        # preserva status original antes de marcar como '7. Status Normal'
         cursor.execute("SELECT status FROM chamados WHERE id = ?", (chamado_id,))
         row = cursor.fetchone()
         status_atual = row['status'] if row and 'status' in row.keys() else None
         cursor.execute("""
             UPDATE chamados 
             SET status_original = COALESCE(status_original, ?),
-                status = '5. Status Normal', 
+                status = '7. Status Normal', 
                 data_resolucao = ?,
                 atualizado_em = CURRENT_TIMESTAMP
             WHERE id = ?
@@ -133,7 +133,7 @@ def reabrir_chamado(chamado_id, status_original="1. Implantado com problema"):
         row = cursor.fetchone()
         saved = row['status_original'] if row and 'status_original' in row.keys() else None
         target_status = saved if saved else status_original
-        if target_status == "5. Status Normal" or not target_status:
+        if target_status == "7. Status Normal" or not target_status:
             target_status = "1. Implantado com problema"
         cursor.execute("""
             UPDATE chamados 
@@ -227,8 +227,8 @@ def obter_estatisticas():
         # Chamados abertos (exclui categoria Geral e N/A)
         cursor.execute("""
             SELECT COUNT(*) as total FROM chamados 
-            WHERE status != '5. Status Normal'
-                AND status NOT IN ('3. Cliente sem integração', '4. Integração Parcial', '6. Integração em construção')
+            WHERE status != '7. Status Normal'
+                AND status NOT IN ('3. Novo cliente sem integração', '5. Implantado sem integração', '6. Integração Parcial', '8. Integração em construção')
                 AND categoria != 'Geral'
                 AND observacao != 'N/A'
         """)
@@ -245,7 +245,7 @@ def obter_estatisticas():
             WHERE status LIKE '%sem integração%'
                OR status LIKE '%parcial%'
                OR status LIKE '%constru%'
-               OR status = '6. Integração em construção'
+               OR status = '8. Integração em construção'
         """)
         sem_integracao = cursor.fetchone()['total']
         
@@ -253,7 +253,7 @@ def obter_estatisticas():
         cursor.execute("""
             SELECT status, COUNT(*) as total 
             FROM chamados 
-            WHERE status != '5. Status Normal'
+            WHERE status != '7. Status Normal'
                 AND categoria != 'Geral'
                 AND observacao != 'N/A'
             GROUP BY status
@@ -327,7 +327,7 @@ def atualizar_cliente_checklist(cliente_id, status_geral, categorias):
             DELETE FROM chamados 
             WHERE cliente_id = ? 
             AND (data_resolucao IS NULL OR data_resolucao = '')
-            AND status IN ('3. Cliente sem integração', '4. Integração Parcial', '6. Integração em construção')
+            AND status IN ('3. Novo cliente sem integração', '5. Implantado sem integração', '6. Integração Parcial', '8. Integração em construção')
         """, (cliente_id,))
         
         # SEMPRE cria um chamado "Geral" com o status escolhido pelo usuário
@@ -364,8 +364,8 @@ def atualizar_cliente_checklist(cliente_id, status_geral, categorias):
             
             # Determina o status baseado no estado
             if "🛠" in estado or "Em Construção" in estado:
-                # Se tem emoji de martelo ou texto "Em Construção", é status 6
-                status_cat = "6. Integração em construção"
+                # Se tem emoji de martelo ou texto "Em Construção", é status 8
+                status_cat = "8. Integração em construção"
             elif "✗" in estado or "Problema" in estado:
                 # Se tem X ou texto "Problema", usa o status geral (3 ou 4)
                 status_cat = status_geral
@@ -393,7 +393,7 @@ def limpar_checklist_cliente(cliente_id):
             DELETE FROM chamados 
             WHERE cliente_id = ? 
             AND (data_resolucao IS NULL OR data_resolucao = '')
-            AND status IN ('3. Cliente sem integração', '4. Integração Parcial', '6. Integração em construção')
+            AND status IN ('3. Novo cliente sem integração', '5. Implantado sem integração', '6. Integração Parcial', '8. Integração em construção')
         """, (cliente_id,))
         return cursor.rowcount
 

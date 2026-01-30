@@ -25,21 +25,23 @@ init_db()
 STATUS_OPTIONS = [
     "1. Implantado com problema",
     "2. Implantado refazendo",
-    "3. Cliente sem integração",
-    "4. Integração Parcial",
-    "5. Status Normal",
-    "6. Integração em construção"
+    "3. Novo cliente sem integração",
+    "5. Implantado sem integração",
+    "6. Integração Parcial",
+    "7. Status Normal",
+    "8. Integração em construção"
 ]
 
 CATEGORIAS = ["Batida", "Escala", "Feriados", "Funcionários", "PDV", "Venda", "SSO", "Geral"]
 
 CORES_STATUS = {
-    "1. Implantado com problema": "#143D6B",   # deep blue
-    "2. Implantado refazendo": "#2E6FB2",     # medium blue
-    "3. Cliente sem integração": "#3FA7DF",   # cyan/sky
-    "4. Integração Parcial": "#78C6F0",       # light sky
-    "5. Status Normal": "#BEE8FF",            # very light blue
-    "6. Integração em construção": "#8FA9BF"  # muted gray-blue
+    "1. Implantado com problema": "#143D6B",
+    "2. Implantado refazendo": "#2E6FB2",
+    "3. Novo cliente sem integração": "#3FA7DF",
+    "5. Implantado sem integração": "#f87171",
+    "6. Integração Parcial": "#78C6F0",
+    "7. Status Normal": "#10b981",
+    "8. Integração em construção": "#8FA9BF"
 }
 
 # ==================== ESTILOS ====================
@@ -69,6 +71,13 @@ st.markdown("""
     .stCaption { font-size: 13px !important; }
 </style>
 """, unsafe_allow_html=True)
+
+# Mensagens persistentes após ações que forçam rerun
+if 'saved_messages' in st.session_state and st.session_state.get('saved_messages'):
+    for _msg in st.session_state.get('saved_messages', []):
+        st.success(_msg)
+    # limpa mensagens exibidas
+    st.session_state['saved_messages'] = []
 
 # ==================== FUNÇÕES AUXILIARES ====================
 
@@ -195,11 +204,11 @@ with tab_dashboard:
         busca_cliente_dash = st.text_input("🔍 Buscar por cliente", placeholder="Digite o nome...", key="busca_dash")
 
     with col_filtro3:
-        classificacoes_unicas = sorted(list(set([c.get('classificacao','novo') for c in todos_chamados])))
+        classificacoes_unicas = sorted(list(set([c.get('classificacao','Guilherme') for c in todos_chamados])))
         if not classificacoes_unicas:
-            classificacoes_unicas = ['novo', '+3 meses', '+6 meses']
+            classificacoes_unicas = ['Guilherme', 'Eduardo', 'Marcelo']
         class_filtro_dash = st.multiselect(
-            "Filtrar por Classificação",
+            "Filtrar por Responsável",
             options=classificacoes_unicas,
             default=classificacoes_unicas,
             key="filtro_class_dash"
@@ -224,7 +233,7 @@ with tab_dashboard:
             c for c in chamados_problema 
             if c['status'] in status_filtro_dash and (
                 not busca_cliente_dash or busca_cliente_dash.lower() in c['cliente'].lower()
-            ) and (not class_filtro_dash or c.get('classificacao','novo') in class_filtro_dash)
+            ) and (not class_filtro_dash or c.get('classificacao','Guilherme') in class_filtro_dash)
         ]
         
         if chamados_filtrados:
@@ -372,7 +381,7 @@ with tab_dashboard:
             # Aplica filtros
             if dados['status_original'] in status_filtro_dash and (
                 not busca_cliente_dash or busca_cliente_dash.lower() in cliente.lower()
-            ) and (chamado_cliente and (not class_filtro_dash or chamado_cliente.get('classificacao','novo') in class_filtro_dash)):
+            ) and (chamado_cliente and (not class_filtro_dash or chamado_cliente.get('classificacao','Guilherme') in class_filtro_dash)):
                 dados['status'] = dados['status_original']  # Mantém o status original
                 clientes_checklist[cliente] = dados
         
@@ -525,7 +534,7 @@ with tab_checklist:
         with st.form("form_add_cliente_checklist"):
             st.markdown("### ➕ Adicionar Novo Cliente")
             novo_nome = st.text_input("Nome do Cliente")
-            nova_class = st.selectbox("Classificação", ["novo", "+3 meses", "+6 meses"])
+            nova_class = st.selectbox("Responsável", ["Guilherme", "Eduardo", "Marcelo"]) 
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
                 if st.form_submit_button("✅ Adicionar", use_container_width=True):
@@ -558,7 +567,7 @@ with tab_checklist:
             with col_del1:
                 status_para_apagar = st.selectbox(
                     "Selecione o status dos chamados a apagar:",
-                    ["3. Cliente sem integração", "4. Integração Parcial", "6. Integração em construção"],
+                    ["3. Novo cliente sem integração", "5. Implantado sem integração", "6. Integração Parcial", "8. Integração em construção"],
                     key="status_apagar"
                 )
             
@@ -626,7 +635,7 @@ with tab_checklist:
             else:
                 # Define status de categoria apenas se ainda não houver um status geral definido
                 if chamados_por_cliente[cid]['status'] is None:
-                    if row['status'] in ['3. Cliente sem integração', '4. Integração Parcial', '6. Integração em construção']:
+                    if row['status'] in ['3. Novo cliente sem integração', '5. Implantado sem integração', '6. Integração Parcial', '8. Integração em construção']:
                         chamados_por_cliente[cid]['status'] = row['status']
             # Guarda categoria e seu chamado_id
             chamados_por_cliente[cid]['categorias'][row['categoria']] = {
@@ -638,11 +647,11 @@ with tab_checklist:
     for cliente in clientes_filtrados:
         cliente_id = cliente['id']
         cliente_nome = cliente['nome']
-        cliente_class = cliente.get('classificacao', 'novo')
+        cliente_class = cliente.get('classificacao', 'Guilherme')
         
         # Pegar dados existentes
         dados_cliente = chamados_por_cliente.get(cliente_id, {'status': None, 'categorias': {}})
-        status_atual = dados_cliente['status'] or '3. Cliente sem integração'
+        status_atual = dados_cliente['status'] or '3. Novo cliente sem integração'
         
         with st.expander(f"👤 {cliente_nome} • {cliente_class}", expanded=False):
             col_status, col_class = st.columns([2, 1])
@@ -650,22 +659,22 @@ with tab_checklist:
             with col_status:
                 novo_status = st.selectbox(
                     "Status Geral do Cliente",
-                    ["3. Cliente sem integração", "4. Integração Parcial", "6. Integração em construção"],
-                    index=["3. Cliente sem integração", "4. Integração Parcial", "6. Integração em construção"].index(status_atual),
+                    ["3. Novo cliente sem integração", "5. Implantado sem integração", "6. Integração Parcial", "8. Integração em construção"],
+                    index=["3. Novo cliente sem integração", "5. Implantado sem integração", "6. Integração Parcial", "8. Integração em construção"].index(status_atual),
                     key=f"status_{cliente_id}"
                 )
             
             with col_class:
                 nova_class = st.selectbox(
-                    "Classificação",
-                    ["novo", "+3 meses", "+6 meses"],
-                    index=["novo", "+3 meses", "+6 meses"].index(cliente_class),
+                    "Responsável",
+                    ["Guilherme", "Eduardo", "Marcelo"],
+                    index=["Guilherme", "Eduardo", "Marcelo"].index(cliente_class) if cliente_class in ["Guilherme", "Eduardo", "Marcelo"] else 0,
                     key=f"class_check_{cliente_id}"
                 )
                 if nova_class != cliente_class:
                     if st.button("💾", key=f"save_class_{cliente_id}"):
                         if atualizar_classificacao(cliente_id, nova_class):
-                            st.success("Classificação atualizada!")
+                            st.success("Responsável atualizado!")
                             st.rerun()
             
             st.markdown("####  Categorias de Integração")
@@ -688,11 +697,11 @@ with tab_checklist:
                     # Mapear para opção do selectbox
                     opcoes = ["✓ OK", "✗ Problema", "🛠️ Em Construção", "N/A"]
                     
-                    if 'constru' in cat_status.lower() or cat_status == '6. Integração em construção':
+                    if 'constru' in cat_status.lower() or cat_status == '8. Integração em construção':
                         idx_atual = 2
-                    elif cat_status in ['3. Cliente sem integração', '4. Integração Parcial']:
+                    elif cat_status in ['3. Novo cliente sem integração', '5. Implantado sem integração', '6. Integração Parcial']:
                         idx_atual = 1
-                    elif not cat_status or cat_status == '5. Status Normal':
+                    elif not cat_status or cat_status == '7. Status Normal':
                         idx_atual = 0  # OK
                     else:
                         idx_atual = 0
@@ -718,7 +727,7 @@ with tab_checklist:
                             status_geral=novo_status,
                             categorias=categorias_atualizadas
                         )
-                        st.success(f"✅ Checklist de {cliente_nome} atualizado!")
+                        st.session_state.setdefault('saved_messages', []).append(f"✅ Checklist de {cliente_nome} atualizado!")
                         st.rerun()
                     except Exception as e:
                         st.error(f"❌ Erro ao salvar: {e}")
@@ -728,10 +737,24 @@ with tab_checklist:
                     try:
                         from database import limpar_checklist_cliente
                         limpar_checklist_cliente(cliente_id)
-                        st.success(f"✅ Checklist de {cliente_nome} limpo!")
+                        st.session_state.setdefault('saved_messages', []).append(f"✅ Checklist de {cliente_nome} limpo!")
                         st.rerun()
                     except Exception as e:
                         st.error(f"❌ Erro: {e}")
+                st.markdown("<br>", unsafe_allow_html=True)
+                confirm = st.checkbox("Confirmar exclusão permanente deste cliente", key=f"confirm_excluir_{cliente_id}")
+                if confirm:
+                    if st.button("🗑️ Excluir Cliente", key=f"btn_excluir_cliente_{cliente_id}", type="secondary", use_container_width=True):
+                        try:
+                            from database import excluir_cliente
+                            deleted = excluir_cliente(cliente_id)
+                            if deleted:
+                                st.session_state.setdefault('saved_messages', []).append(f"✅ Cliente '{cliente_nome}' e todos os registros vinculados foram excluídos!")
+                                st.rerun()
+                            else:
+                                st.warning("Nenhum registro excluído. Verifique se o cliente ainda existe.")
+                        except Exception as e:
+                            st.error(f"❌ Erro ao excluir cliente: {e}")
 
 # ==================== ABA CHAMADOS ATIVOS ====================
 with tab_chamados:
@@ -847,7 +870,7 @@ with tab_chamados:
                             with get_db() as conn:
                                 cursor = conn.cursor()
                                 cursor.execute("""
-                                    UPDATE chamados SET resolucao = ?, status_original = COALESCE(status_original, status), status = '5. Status Normal', data_resolucao = CURRENT_DATE, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?
+                                    UPDATE chamados SET resolucao = ?, status_original = COALESCE(status_original, status), status = '7. Status Normal', data_resolucao = CURRENT_DATE, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?
                                 """, (resolucao_txt, chamado['chamado_id']))
                             st.success("Resolvido!")
                             st.rerun()

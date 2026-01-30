@@ -124,8 +124,8 @@ funcionarios, pdv, venda, sso, atualizado_em
 | 1. Implantado com problema | Cliente integrado mas com erros técnicos |
 | 2. Implantado refazendo | Reprocessando a integração |
 | 3. Novo cliente sem integração | Cliente novo aguardando setup inicial |
-| 4. Implantado sem integração | Cliente ativo mas sem integrações |
-| 5. Status Normal | ✅ Tudo funcionando corretamente |
+| 5. Implantado sem integração | Cliente ativo mas sem integrações |
+| 7. Status Normal | ✅ Tudo funcionando corretamente |
 
 ---
 
