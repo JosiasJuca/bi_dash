@@ -15,20 +15,46 @@ from database import (
     atualizar_cliente_checklist, limpar_checklist_cliente, listar_chamados_problemas,
     deletar_chamados_por_status, deletar_chamados_por_cliente
 )
+
+
+# ==================== PROTEÇÃO POR SENHA ====================
+if 'autenticado' not in st.session_state:
+    st.session_state['autenticado'] = False
+
+SENHA_CORRETA = os.environ.get('DASH_SENHA')
+if not SENHA_CORRETA:
+    st.error('A senha do dashboard não está configurada. Defina a variável de ambiente DASH_SENHA.')
+    st.stop()
+
+if not st.session_state['autenticado']:
+    st.title('🔒 Acesso Restrito')
+    senha = st.text_input('Digite a senha para acessar o dashboard:', type='password')
+    if st.button('Entrar'):
+        if senha == SENHA_CORRETA:
+            st.session_state['autenticado'] = True
+            st.rerun()
+        else:
+            st.error('Senha incorreta!')
+    st.stop()
+
+
+
+
 # ==================== CONFIGURAÇÃO ====================
 st.set_page_config(page_title="BI Integrações", layout="wide", page_icon="📊")
 
 # Inicializa o banco na primeira execução
 init_db()
 
+
 # ==================== CONSTANTES ====================
 STATUS_OPTIONS = [
     "1. Implantado com problema",
     "2. Implantado refazendo",
     "3. Novo cliente sem integração",
-    "5. Implantado sem integração",
-    "6. Integração Parcial",
-    "7. Status Normal",
+    "4. Implantado sem integração",
+    "5. Integração Parcial",
+    "6. Status Normal",
     "8. Integração em construção"
 ]
 
@@ -65,12 +91,18 @@ st.markdown("""
         font-size: 14px;
         font-weight: bold;
         color: white;
-    }
+    } 
+    .st-c1 {
+    background-color: rgb(0, 84, 163);
+     }   
+
     /* Increase table and caption sizes */
     table, th, td { font-size: 15px !important; }
     .stCaption { font-size: 13px !important; }
 </style>
 """, unsafe_allow_html=True)
+
+
 
 # Mensagens persistentes após ações que forçam rerun
 if 'saved_messages' in st.session_state and st.session_state.get('saved_messages'):
