@@ -18,24 +18,24 @@ from database import (
 
 
 # ==================== PROTEÇÃO POR SENHA ====================
-if 'autenticado' not in st.session_state:
-    st.session_state['autenticado'] = False
+# if 'autenticado' not in st.session_state:
+#     st.session_state['autenticado'] = False
 
-SENHA_CORRETA = os.environ.get('DASH_SENHA')
-if not SENHA_CORRETA:
-    st.error('A senha do dashboard não está configurada. Defina a variável de ambiente DASH_SENHA.')
-    st.stop()
+# SENHA_CORRETA = os.environ.get('DASH_SENHA')
+# if not SENHA_CORRETA:
+#     st.error('A senha do dashboard não está configurada. Defina a variável de ambiente DASH_SENHA.')
+#     st.stop()
 
-if not st.session_state['autenticado']:
-    st.title('🔒 Acesso Restrito')
-    senha = st.text_input('Digite a senha para acessar o dashboard:', type='password')
-    if st.button('Entrar'):
-        if senha == SENHA_CORRETA:
-            st.session_state['autenticado'] = True
-            st.rerun()
-        else:
-            st.error('Senha incorreta!')
-    st.stop()
+# if not st.session_state['autenticado']:
+#     st.title('🔒 Acesso Restrito')
+#     senha = st.text_input('Digite a senha para acessar o dashboard:', type='password')
+#     if st.button('Entrar'):
+#         if senha == SENHA_CORRETA:
+#             st.session_state['autenticado'] = True
+#             st.rerun()
+#         else:
+#             st.error('Senha incorreta!')
+#     st.stop()
 
 
 # ==================== CONFIGURAÇÃO ====================
@@ -77,6 +77,7 @@ STATUS_LABELS = {
 }
 
 # ==================== ESTILOS ====================
+
 st.markdown("""
 <style>
     /* Global font sizing */
@@ -99,16 +100,72 @@ st.markdown("""
         color: white;
     } 
 
-     .st-c1 {
-     background-color: rgb(0, 84, 163);
-      }   
+    span.st-c1, span.st-c2, p.st-bd{
+        background-color: rgb(0, 84, 163) !important;
+    }   
+
+    .p {
+        color: rgb(0, 84, 163);
+    }           
 
     /* Increase table and caption sizes */
     table, th, td { font-size: 15px !important; }
     .stCaption { font-size: 13px !important; }
+
+    /* Forçar abas em azul e remover underline/borda indesejada */
+    [role="tablist"] {
+        border-bottom: none !important;
+    }
+
+    /* Seleciona botões de abas */
+    [role="tablist"] button[role="tab"] {
+        color: #006ED2 !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 6px 12px !important;
+        box-shadow: none !important;
+        outline: none !important;
+        background-image: none !important;
+    }
+    /* Aba ativa */
+    [role="tablist"] button[role="tab"][aria-selected="true"] {
+        background-color: #006ED2 !important;
+        color: white !important;
+        box-shadow: none !important;
+        border-bottom: none !important;
+    }
+    /* Hover */
+    [role="presentation"] .st-c1 {
+        background-color: rgba(0,110,210,0.08) !important;
+        box-shadow: none !important;
+    }
+
+    /* Tab highlight (BaseWeb/Streamlit) - força azul */
+    div[data-baseweb="tab-highlight"],
+    [data-baseweb="tab-highlight"] {
+        background-color: #006ED2 !important;
+        background-image: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        height: 4px !important;
+        opacity: 1 !important;
+    }
+
+    /* Garantia caso destaque seja aplicado por pseudo-elementos */
+    [data-baseweb="tab-highlight"]::before,
+    [data-baseweb="tab-highlight"]::after,
+    div[data-baseweb="tab-highlight"]::before,
+    div[data-baseweb="tab-highlight"]::after {
+        background-color: #006ED2 !important;
+        display: block !important;
+        content: "" !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
 </style>
 """, unsafe_allow_html=True)
-
 
 # Mensagens persistentes após ações que forçam rerun
 if 'saved_messages' in st.session_state and st.session_state.get('saved_messages'):
@@ -259,230 +316,255 @@ with tab_dashboard:
     st.divider()
     
     # ==================== TABELAS DE STATUS ====================
-    col_tab1, col_tab2 = st.columns([1, 1.5])
+    # Primeiro bloco: Chamados
+    st.subheader("Chamados")
     
-    with col_tab1:
-        st.subheader(" Status de Implantação")
+    # Busca chamados com problemas (status 1 e 2)
+    chamados_problema = [
+        c for c in todos_chamados 
+        if c['status'] in ['1. Implantado com problema', '2. Implantado refazendo']
+    ]
+    
+    # Aplica filtros
+    chamados_filtrados = [
+        c for c in chamados_problema 
+        if c['status'] in status_filtro_dash and (
+            not busca_cliente_dash or busca_cliente_dash.lower() in c['cliente'].lower()
+        ) and (not class_filtro_dash or c.get('classificacao','Guilherme') in class_filtro_dash)
+    ]
+    
+    if chamados_filtrados:
+        # Função para calcular previsão de resolução
+        from datetime import datetime, timedelta
+        import re
         
-        # Busca chamados com problemas (status 1 e 2)
-        chamados_problema = [
-            c for c in todos_chamados 
-            if c['status'] in ['1. Implantado com problema', '2. Implantado refazendo']
-        ]
+        def calcular_previsao(data_abertura_str, observacao=""):
+            # Primeiro tenta extrair da observação se existe "Previsão: DD/MM/AAAA"
+            if observacao:
+                match = re.search(r'Previsão:\s*(\d{2}/\d{2}/\d{4})', observacao)
+                if match:
+                    return match.group(1)
+            
+            # Se não encontrar na observação, calcula 7 dias a partir da abertura
+            try:
+                data_abertura = datetime.strptime(data_abertura_str, '%Y-%m-%d')
+                # Adiciona 7 dias (assumindo 5 dias úteis + fim de semana)
+                previsao = data_abertura + timedelta(days=7)
+                return previsao.strftime('%d/%m/%Y')
+            except:
+                return "A definir"
+        
+        # Exibe a tabela
+        table_html = '<div style="background: #f5f5f5; border-radius: 10px; padding: 15px; border: 1px solid #e0e0e0;">'
+        table_html += '<table style="width: 100%; border-collapse: collapse;">'
+        table_html += '<thead><tr style="border-bottom: 2px solid #444;">'
+        table_html += '<th style="padding: 10px; text-align: left; color: #888; font-size: 11px;">CLIENTE</th>'
+        table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">STATUS</th>'
+        table_html += '<th style="padding: 10px; text-align: left; color: #888; font-size: 11px;">CATEGORIA</th>'
+        table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">DATA ABERTURA</th>'
+        table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">PREVISÃO RESOLUÇÃO</th>'
+        table_html += '<th style="padding: 10px; text-align: left; color: #888; font-size: 11px;">OBSERVAÇÃO</th>'
+        table_html += '</tr></thead><tbody>'
+        
+        for chamado in chamados_filtrados:
+            # Formatar data de abertura
+            try:
+                data_formatada = datetime.strptime(chamado["data_abertura"], '%Y-%m-%d').strftime('%d/%m/%Y')
+            except:
+                data_formatada = chamado["data_abertura"]
+            
+            previsao = calcular_previsao(chamado["data_abertura"], chamado.get("observacao", ""))
+            
+            table_html += '<tr style="border-bottom: 1px solid #e0e0e0;">'
+            table_html += f'<td style="padding: 10px; color: #111;">{chamado["cliente"]}</td>'
+            table_html += f'<td style="padding: 10px; text-align: center;">{status_badge(chamado["status"])}</td>'
+            table_html += f'<td style="padding: 10px; color: #111;">{chamado["categoria"]}</td>'
+            table_html += f'<td style="padding: 10px; text-align: center; color: #666;">{data_formatada}</td>'
+            table_html += f'<td style="padding: 10px; text-align: center; color: #666; font-weight: bold;">{previsao}</td>'
+            table_html += f'<td style="padding: 10px; color: #333; font-size: 13px;">{chamado.get("observacao", "") or "-"}</td>'
+            table_html += '</tr>'
+        
+        table_html += '</tbody></table></div>'
+        st.markdown(table_html, unsafe_allow_html=True)
+    else:
+        st.info("Nenhum cliente com problemas")
+    
+    st.divider()
+    
+    # Segundo bloco: Checklist de Integração
+    st.subheader("Checklist de Integração")
+    
+    # Busca clientes sem integração (status 3 e 4) e também chamados "Em construção" (status 6)
+    chamados_sem_int = [
+        c for c in todos_chamados
+        if ('sem integração' in (c.get('status') or '').lower()) or ('parcial' in (c.get('status') or '').lower()) or ('constru' in (c.get('status') or '').lower())
+    ]
+    
+    # Primeiro agrupa TODOS os chamados por cliente (sem filtro de status ainda)
+    # Usar chamados completos (inclui 'Geral') para respeitar o status geral salvo
+    from database import listar_chamados_abertos_completos
+    chamados_completos = listar_chamados_abertos_completos()
+    clientes_checklist_completo = {}
+    for chamado in chamados_completos:
+        cliente = chamado['cliente']
+        categoria = chamado.get('categoria', '')
+        
+        if cliente not in clientes_checklist_completo:
+            clientes_checklist_completo[cliente] = {
+                'status_original': chamado['status'],  # Guarda o status original
+                'id': chamado['id'],
+                'batida': False,
+                'batida_construcao': False,
+                'escala': False,
+                'escala_construcao': False,
+                'feriados': False,
+                'feriados_construcao': False,
+                'funcionarios': False,
+                'funcionarios_construcao': False,
+                'funcionarios_na': False,
+                'pdv': False,
+                'pdv_construcao': False,
+                'pdv_na': False,
+                'venda': False,
+                'venda_construcao': False,
+                'venda_na': False,
+                'sso': False,
+                'sso_construcao': False,
+                'sso_na': False,
+                'batida_na': False,
+                'escala_na': False,
+                'feriados_na': False
+            }
+        
+        # Se é categoria "Geral", sempre usa esse status (prioridade máxima)
+        if categoria == "Geral":
+            clientes_checklist_completo[cliente]['status_original'] = chamado['status']
+        
+        # Marca a categoria como concluída, em construção ou N/A
+        cat = (chamado.get('categoria') or '').lower()
+        status_lower = (chamado.get('status') or '').lower()
+        observacao = (chamado.get('observacao') or '').strip()
+        is_construcao = 'constru' in status_lower or status_lower.startswith('6')
+        is_na = observacao == 'N/A'
+
+        if 'batida' in cat:
+            if is_na:
+                clientes_checklist_completo[cliente]['batida_na'] = True
+            elif is_construcao:
+                clientes_checklist_completo[cliente]['batida_construcao'] = True
+            else:
+                clientes_checklist_completo[cliente]['batida'] = True
+        elif 'escala' in cat:
+            if is_na:
+                clientes_checklist_completo[cliente]['escala_na'] = True
+            elif is_construcao:
+                clientes_checklist_completo[cliente]['escala_construcao'] = True
+            else:
+                clientes_checklist_completo[cliente]['escala'] = True
+        elif 'feriado' in cat:
+            if is_na:
+                clientes_checklist_completo[cliente]['feriados_na'] = True
+            elif is_construcao:
+                clientes_checklist_completo[cliente]['feriados_construcao'] = True
+            else:
+                clientes_checklist_completo[cliente]['feriados'] = True
+        elif 'funcionario' in cat or 'funcionário' in cat:
+            if is_na:
+                clientes_checklist_completo[cliente]['funcionarios_na'] = True
+            elif is_construcao:
+                clientes_checklist_completo[cliente]['funcionarios_construcao'] = True
+            else:
+                clientes_checklist_completo[cliente]['funcionarios'] = True
+        elif 'pdv' in cat:
+            if is_na:
+                clientes_checklist_completo[cliente]['pdv_na'] = True
+            elif is_construcao:
+                clientes_checklist_completo[cliente]['pdv_construcao'] = True
+            else:
+                clientes_checklist_completo[cliente]['pdv'] = True
+        elif 'venda' in cat:
+            if is_na:
+                clientes_checklist_completo[cliente]['venda_na'] = True
+            elif is_construcao:
+                clientes_checklist_completo[cliente]['venda_construcao'] = True
+            else:
+                clientes_checklist_completo[cliente]['venda'] = True
+        elif 'sso' in cat:
+            if is_na:
+                clientes_checklist_completo[cliente]['sso_na'] = True
+            elif is_construcao:
+                clientes_checklist_completo[cliente]['sso_construcao'] = True
+            else:
+                clientes_checklist_completo[cliente]['sso'] = True
+    # AGORA aplica os filtros (remove clientes cujo status não está no filtro)
+    clientes_checklist = {}
+    for cliente, dados in clientes_checklist_completo.items():
+        # Pega o chamado para verificar classificação
+        chamado_cliente = next((c for c in chamados_sem_int if c['cliente'] == cliente), None)
         
         # Aplica filtros
-        chamados_filtrados = [
-            c for c in chamados_problema 
-            if c['status'] in status_filtro_dash and (
-                not busca_cliente_dash or busca_cliente_dash.lower() in c['cliente'].lower()
-            ) and (not class_filtro_dash or c.get('classificacao','Guilherme') in class_filtro_dash)
-        ]
-        
-        if chamados_filtrados:
-            # Exibe a tabela
-            table_html = '<div style="background: #f5f5f5; border-radius: 10px; padding: 15px; border: 1px solid #e0e0e0;">'
-            table_html += '<table style="width: 100%; border-collapse: collapse;">'
-            table_html += '<thead><tr style="border-bottom: 2px solid #444;">'
-            table_html += '<th style="padding: 10px; text-align: left; color: #888; font-size: 11px;">CLIENTE</th>'
-            table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">STATUS_IMPLANTAÇÃO</th>'
-            table_html += '<th style="padding: 10px; text-align: left; color: #888; font-size: 11px;">CATEGORIA</th>'
-            table_html += '<th style="padding: 10px; text-align: left; color: #888; font-size: 11px;">OBSERVAÇÃO</th>'
-            table_html += '</tr></thead><tbody>'
-            
-            for chamado in chamados_filtrados:
-                table_html += '<tr style="border-bottom: 1px solid #e0e0e0;">'
-                table_html += f'<td style="padding: 10px; color: #111;">{chamado["cliente"]}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center;">{status_badge(chamado["status"])}</td>'
-                table_html += f'<td style="padding: 10px; color: #111;">{chamado["categoria"]}</td>'
-                table_html += f'<td style="padding: 10px; color: #333; font-size: 13px;">{chamado.get("observacao", "") or "-"}</td>'
-                table_html += '</tr>'
-            
-            table_html += '</tbody></table></div>'
-            st.markdown(table_html, unsafe_allow_html=True)
-        else:
-            st.info("Nenhum cliente com problemas")
+        if dados['status_original'] in status_filtro_dash and (
+            not busca_cliente_dash or busca_cliente_dash.lower() in cliente.lower()
+        ) and (chamado_cliente and (not class_filtro_dash or chamado_cliente.get('classificacao','Guilherme') in class_filtro_dash)):
+            dados['status'] = dados['status_original']  # Mantém o status original
+            clientes_checklist[cliente] = dados
     
-    with col_tab2:
-        st.subheader(" Checklist de Integração")
-        
-        # Busca clientes sem integração (status 3 e 4) e também chamados "Em construção" (status 6)
-        chamados_sem_int = [
-            c for c in todos_chamados
-            if ('sem integração' in (c.get('status') or '').lower()) or ('parcial' in (c.get('status') or '').lower()) or ('constru' in (c.get('status') or '').lower())
-        ]
-        
-        # Primeiro agrupa TODOS os chamados por cliente (sem filtro de status ainda)
-        # Usar chamados completos (inclui 'Geral') para respeitar o status geral salvo
-        from database import listar_chamados_abertos_completos
-        chamados_completos = listar_chamados_abertos_completos()
-        clientes_checklist_completo = {}
-        for chamado in chamados_completos:
-            cliente = chamado['cliente']
-            categoria = chamado.get('categoria', '')
-            
-            if cliente not in clientes_checklist_completo:
-                clientes_checklist_completo[cliente] = {
-                    'status_original': chamado['status'],  # Guarda o status original
-                    'id': chamado['id'],
-                    'batida': False,
-                    'batida_construcao': False,
-                    'escala': False,
-                    'escala_construcao': False,
-                    'feriados': False,
-                    'feriados_construcao': False,
-                    'funcionarios': False,
-                    'funcionarios_construcao': False,
-                    'funcionarios_na': False,
-                    'pdv': False,
-                    'pdv_construcao': False,
-                    'pdv_na': False,
-                    'venda': False,
-                    'venda_construcao': False,
-                    'venda_na': False,
-                    'sso': False,
-                    'sso_construcao': False,
-                    'sso_na': False,
-                    'batida': False,
-                    'batida_construcao': False,
-                    'batida_na': False,
-                    'escala': False,
-                    'escala_construcao': False,
-                    'escala_na': False,
-                    'feriados': False,
-                    'feriados_construcao': False,
-                    'feriados_na': False
-                }
-            
-            # Se é categoria "Geral", sempre usa esse status (prioridade máxima)
-            if categoria == "Geral":
-                clientes_checklist_completo[cliente]['status_original'] = chamado['status']
-            
-            # Marca a categoria como concluída, em construção ou N/A
-            cat = (chamado.get('categoria') or '').lower()
-            status_lower = (chamado.get('status') or '').lower()
-            observacao = (chamado.get('observacao') or '').strip()
-            is_construcao = 'constru' in status_lower or status_lower.startswith('6')
-            is_na = observacao == 'N/A'
+    if clientes_checklist:
+        # Exibe a tabela única
+        table_html = '<div style="background: #f5f5f5; border-radius: 10px; padding: 15px; border: 1px solid #e0e0e0;">'
+        table_html += '<table style="width: 100%; border-collapse: collapse;">'
+        table_html += '<thead><tr style="border-bottom: 2px solid #444;">'
+        table_html += '<th style="padding: 10px; text-align: left; color: #888; font-size: 11px;">CLIENTE</th>'
+        table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">STATUS_IMPLANTAÇÃO</th>'
+        table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">BATIDA</th>'
+        table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">ESCALA</th>'
+        table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">FERIADOS</th>'
+        table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">FUNCIONÁRIOS</th>'
+        table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">PDV</th>'
+        table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">VENDA</th>'
+        table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">SSO</th>'
+        table_html += '</tr></thead><tbody>'
 
-            if 'batida' in cat:
-                if is_na:
-                    clientes_checklist_completo[cliente]['batida_na'] = True
-                elif is_construcao:
-                    clientes_checklist_completo[cliente]['batida_construcao'] = True
-                else:
-                    clientes_checklist_completo[cliente]['batida'] = True
-            elif 'escala' in cat:
-                if is_na:
-                    clientes_checklist_completo[cliente]['escala_na'] = True
-                elif is_construcao:
-                    clientes_checklist_completo[cliente]['escala_construcao'] = True
-                else:
-                    clientes_checklist_completo[cliente]['escala'] = True
-            elif 'feriado' in cat:
-                if is_na:
-                    clientes_checklist_completo[cliente]['feriados_na'] = True
-                elif is_construcao:
-                    clientes_checklist_completo[cliente]['feriados_construcao'] = True
-                else:
-                    clientes_checklist_completo[cliente]['feriados'] = True
-            elif 'funcionario' in cat or 'funcionário' in cat:
-                if is_na:
-                    clientes_checklist_completo[cliente]['funcionarios_na'] = True
-                elif is_construcao:
-                    clientes_checklist_completo[cliente]['funcionarios_construcao'] = True
-                else:
-                    clientes_checklist_completo[cliente]['funcionarios'] = True
-            elif 'pdv' in cat:
-                if is_na:
-                    clientes_checklist_completo[cliente]['pdv_na'] = True
-                elif is_construcao:
-                    clientes_checklist_completo[cliente]['pdv_construcao'] = True
-                else:
-                    clientes_checklist_completo[cliente]['pdv'] = True
-            elif 'venda' in cat:
-                if is_na:
-                    clientes_checklist_completo[cliente]['venda_na'] = True
-                elif is_construcao:
-                    clientes_checklist_completo[cliente]['venda_construcao'] = True
-                else:
-                    clientes_checklist_completo[cliente]['venda'] = True
-            elif 'sso' in cat:
-                if is_na:
-                    clientes_checklist_completo[cliente]['sso_na'] = True
-                elif is_construcao:
-                    clientes_checklist_completo[cliente]['sso_construcao'] = True
-                else:
-                    clientes_checklist_completo[cliente]['sso'] = True
-        
-        # AGORA aplica os filtros (remove clientes cujo status não está no filtro)
-        clientes_checklist = {}
-        for cliente, dados in clientes_checklist_completo.items():
-            # Pega o chamado para verificar classificação
-            chamado_cliente = next((c for c in chamados_sem_int if c['cliente'] == cliente), None)
-            
-            # Aplica filtros
-            if dados['status_original'] in status_filtro_dash and (
-                not busca_cliente_dash or busca_cliente_dash.lower() in cliente.lower()
-            ) and (chamado_cliente and (not class_filtro_dash or chamado_cliente.get('classificacao','Guilherme') in class_filtro_dash)):
-                dados['status'] = dados['status_original']  # Mantém o status original
-                clientes_checklist[cliente] = dados
-        
-        if clientes_checklist:
-            # Exibe a tabela
-            table_html = '<div style="background: #f5f5f5; border-radius: 10px; padding: 15px; border: 1px solid #e0e0e0;">'
-            table_html += '<table style="width: 100%; border-collapse: collapse;">'
-            table_html += '<thead><tr style="border-bottom: 2px solid #444;">'
-            table_html += '<th style="padding: 10px; text-align: left; color: #888; font-size: 11px;">CLIENTE</th>'
-            table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">STATUS_IMPLANTAÇÃO</th>'
-            table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">BATIDA</th>'
-            table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">ESCALA</th>'
-            table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">FERIADOS</th>'
-            table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">FUNCIONÁRIOS</th>'
-            table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">PDV</th>'
-            table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">VENDA</th>'
-            table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">SSO</th>'
-            table_html += '</tr></thead><tbody>'
+        # Função para escolher ícone baseado nos estados
+        def pick_icon(has_chamado, construcao, na):
+            # Ordem de prioridade:
+            # 1) N/A -> mostrar 'N/A'
+            # 2) Em construção -> mostrar 🛠️
+            # 3) Existe chamado (qualquer) -> mostrar ✗ (problema pendente)
+            # 4) Sem chamado -> mostrar ✓ (ok)
+            if na:
+                return ('N/A', '#8FA9BF')
+            if construcao:
+                return ('🛠️', '#2E6FB2')
+            if has_chamado:
+                return ('✗', "#E91616")
+            return ('✓', "#045F2D")
 
-            for cliente, dados in clientes_checklist.items():
-                # Função para escolher ícone baseado nos estados
-                def pick_icon(has_chamado, construcao, na):
-                    # Ordem de prioridade:
-                    # 1) N/A -> mostrar 'N/A'
-                    # 2) Em construção -> mostrar 🛠️
-                    # 3) Existe chamado (qualquer) -> mostrar ✗ (problema pendente)
-                    # 4) Sem chamado -> mostrar ✓ (ok)
-                    if na:
-                        return ('N/A', '#8FA9BF')
-                    if construcao:
-                        return ('🛠️', '#2E6FB2')
-                    if has_chamado:
-                        return ('✗', "#E91616")
-                    return ('✓', "#045F2D")
+        for cliente, dados in clientes_checklist.items():
+            batida_icon, batida_color = pick_icon(dados.get('batida'), dados.get('batida_construcao'), dados.get('batida_na'))
+            escala_icon, escala_color = pick_icon(dados.get('escala'), dados.get('escala_construcao'), dados.get('escala_na'))
+            feriados_icon, feriados_color = pick_icon(dados.get('feriados'), dados.get('feriados_construcao'), dados.get('feriados_na'))
+            funcionarios_icon, funcionarios_color = pick_icon(dados.get('funcionarios'), dados.get('funcionarios_construcao'), dados.get('funcionarios_na'))
+            pdv_icon, pdv_color = pick_icon(dados.get('pdv'), dados.get('pdv_construcao'), dados.get('pdv_na'))
+            venda_icon, venda_color = pick_icon(dados.get('venda'), dados.get('venda_construcao'), dados.get('venda_na'))
+            sso_icon, sso_color = pick_icon(dados.get('sso'), dados.get('sso_construcao'), dados.get('sso_na'))
 
-                batida_icon, batida_color = pick_icon(dados.get('batida'), dados.get('batida_construcao'), dados.get('batida_na'))
-                escala_icon, escala_color = pick_icon(dados.get('escala'), dados.get('escala_construcao'), dados.get('escala_na'))
-                feriados_icon, feriados_color = pick_icon(dados.get('feriados'), dados.get('feriados_construcao'), dados.get('feriados_na'))
-                funcionarios_icon, funcionarios_color = pick_icon(dados.get('funcionarios'), dados.get('funcionarios_construcao'), dados.get('funcionarios_na'))
-                pdv_icon, pdv_color = pick_icon(dados.get('pdv'), dados.get('pdv_construcao'), dados.get('pdv_na'))
-                venda_icon, venda_color = pick_icon(dados.get('venda'), dados.get('venda_construcao'), dados.get('venda_na'))
-                sso_icon, sso_color = pick_icon(dados.get('sso'), dados.get('sso_construcao'), dados.get('sso_na'))
+            table_html += '<tr style="border-bottom: 1px solid #e0e0e0;">'
+            table_html += f'<td style="padding: 10px; color: #111;">{cliente}</td>'
+            table_html += f'<td style="padding: 10px; text-align: center;">{status_badge(dados["status"])}</td>'
+            table_html += f'<td style="padding: 10px; text-align: center; color: {batida_color}; font-size: 20px;">{batida_icon}</td>'
+            table_html += f'<td style="padding: 10px; text-align: center; color: {escala_color}; font-size: 20px;">{escala_icon}</td>'
+            table_html += f'<td style="padding: 10px; text-align: center; color: {feriados_color}; font-size: 20px;">{feriados_icon}</td>'
+            table_html += f'<td style="padding: 10px; text-align: center; color: {funcionarios_color}; font-size: 20px;">{funcionarios_icon}</td>'
+            table_html += f'<td style="padding: 10px; text-align: center; color: {pdv_color}; font-size: 20px;">{pdv_icon}</td>'
+            table_html += f'<td style="padding: 10px; text-align: center; color: {venda_color}; font-size: 20px;">{venda_icon}</td>'
+            table_html += f'<td style="padding: 10px; text-align: center; color: {sso_color}; font-size: 20px;">{sso_icon}</td>'
+            table_html += '</tr>'
 
-                table_html += '<tr style="border-bottom: 1px solid #e0e0e0;">'
-                table_html += f'<td style="padding: 10px; color: #111;">{cliente}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center;">{status_badge(dados["status"])}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: {batida_color}; font-size: 20px;">{batida_icon}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: {escala_color}; font-size: 20px;">{escala_icon}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: {feriados_color}; font-size: 20px;">{feriados_icon}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: {funcionarios_color}; font-size: 20px;">{funcionarios_icon}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: {pdv_color}; font-size: 20px;">{pdv_icon}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: {venda_color}; font-size: 20px;">{venda_icon}</td>'
-                table_html += f'<td style="padding: 10px; text-align: center; color: {sso_color}; font-size: 20px;">{sso_icon}</td>'
-                table_html += '</tr>'
-
-            table_html += '</tbody></table></div>'
-            st.markdown(table_html, unsafe_allow_html=True)
-        else:
-            st.info("Nenhum cliente sem integração")
+        table_html += '</tbody></table></div>'
+        st.markdown(table_html, unsafe_allow_html=True)
+    else:
+        st.info("Nenhum cliente sem integração")
     
     st.divider()
     
@@ -555,7 +637,7 @@ with tab_dashboard:
 
 # ==================== ABA CHECKLIST ====================
 with tab_checklist:
-    st.subheader("⏳ Gerenciar Checklist de Integração")
+    st.subheader("Gerenciar Checklist de Integração")
     st.markdown("""Use esta aba para gerenciar clientes **sem integração completa** (novos, parciais ou em construção).
     Para problemas em clientes já implantados, use a aba **Chamados Ativos**.""")
     
@@ -732,21 +814,35 @@ with tab_checklist:
             for idx, categoria in enumerate(categorias_integracoes):
                 col_idx = idx % 4
                 with cols[col_idx]:
-                    # Determinar estado atual da categoria
+                    # Determinar estado atual da categoria baseado nos dados do Dashboard
                     cat_info = dados_cliente['categorias'].get(categoria, {})
                     cat_status = cat_info.get('status', '')
+                    observacao = ''
                     
-                    # Mapear para opção do selectbox
+                    # Busca a observação do chamado desta categoria
+                    if categoria in dados_cliente['categorias']:
+                        # Busca a observação deste chamado específico
+                        from database import get_db
+                        with get_db() as conn:
+                            cursor = conn.cursor()
+                            cursor.execute("SELECT observacao FROM chamados WHERE id = ?", (dados_cliente['categorias'][categoria]['chamado_id'],))
+                            obs_result = cursor.fetchone()
+                            if obs_result:
+                                observacao = obs_result['observacao'] or ''
+                    
+                    # Mapear para opção do selectbox baseado no status e observação
                     opcoes = ["✓ OK", "✗ Problema", "🛠️ Em Construção", "N/A"]
+                    idx_atual = 0  # Default OK
                     
-                    if 'constru' in cat_status.lower() or cat_status == '8. Integração em construção':
-                        idx_atual = 2
-                    elif cat_status in ['3. Novo cliente sem integração', '5. Implantado sem integração', '6. Integração Parcial']:
-                        idx_atual = 1
+                    # Determina o índice baseado na observação N/A primeiro, depois status
+                    if observacao == 'N/A':
+                        idx_atual = 3  # N/A
+                    elif 'constru' in cat_status.lower() or cat_status == '8. Integração em construção':
+                        idx_atual = 2  # Em Construção
+                    elif cat_status in ['3. Novo cliente sem integração', '5. Implantado sem integração', '6. Integração Parcial', '1. Implantado com problema', '2. Implantado refazendo']:
+                        idx_atual = 1  # Problema
                     elif not cat_status or cat_status == '7. Status Normal':
                         idx_atual = 0  # OK
-                    else:
-                        idx_atual = 0
                     
                     categorias_atualizadas[categoria] = st.selectbox(
                         categoria,
@@ -822,9 +918,16 @@ with tab_chamados:
                     "2. Implantado refazendo"
                 ])  # Apenas status de problema
                 
-            with col_f2:
                 categoria_sel = st.selectbox("Categoria", CATEGORIAS)
+                
+            with col_f2:
                 data_abertura = st.date_input("Data de Abertura", value=date.today())
+                
+                # Campo para previsão de resolução
+                from datetime import timedelta
+                previsao_default = date.today() + timedelta(days=7)
+                previsao_resolucao = st.date_input("Previsão de Resolução", value=previsao_default)
+                
                 observacao = st.text_area("Observação")
             
             if st.form_submit_button("💾 Criar Chamado", use_container_width=True):
@@ -841,12 +944,18 @@ with tab_chamados:
                         cliente = buscar_cliente_por_nome(cliente_sel)
                         cliente_id = cliente['id']
                     
+                    # Adiciona observação com previsão de resolução
+                    observacao_completa = observacao
+                    if previsao_resolucao:
+                        previsao_str = previsao_resolucao.strftime('%d/%m/%Y')
+                        observacao_completa
+                    
                     # Adiciona chamado
                     adicionar_chamado(
                         cliente_id=cliente_id,
                         status=status_sel,
                         categoria=categoria_sel,
-                        observacao=observacao,
+                        observacao=observacao_completa,
                         data_abertura=data_abertura.isoformat()
                     )
                     
