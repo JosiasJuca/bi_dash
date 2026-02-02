@@ -13,7 +13,7 @@ from database import (
     listar_chamados_resolvidos, obter_estatisticas, buscar_cliente_por_nome,
     excluir_chamado, excluir_cliente, atualizar_classificacao, 
     atualizar_cliente_checklist, limpar_checklist_cliente, listar_chamados_problemas,
-    deletar_chamados_por_status, deletar_chamados_por_cliente, atualizar_etapa_chamado
+    atualizar_etapa_chamado
 )
 
 
@@ -723,6 +723,7 @@ with tab_checklist:
             with col_del2:
                 st.markdown("<br>", unsafe_allow_html=True)
                 if st.button("🗑️ Apagar por Status", use_container_width=True, key="btn_apagar_status"):
+                    from database import deletar_chamados_por_status
                     total_apagado = deletar_chamados_por_status(status_para_apagar)
                     st.success(f"✅ {total_apagado} chamados com status '{status_para_apagar}' foram apagados!")
                     st.rerun()
@@ -745,6 +746,7 @@ with tab_checklist:
             with col_del4:
                 st.markdown("<br>", unsafe_allow_html=True)
                 if st.button("🗑️ Apagar por Cliente", use_container_width=True, key="btn_apagar_cliente"):
+                    from database import deletar_chamados_por_cliente
                     cliente_selecionado = next((c for c in todos_clientes_lista if c['nome'] == cliente_para_apagar), None)
                     if cliente_selecionado:
                         total_apagado = deletar_chamados_por_cliente(cliente_selecionado['id'])
