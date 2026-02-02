@@ -446,6 +446,11 @@ with tab_dashboard:
         observacao = (chamado.get('observacao') or '').strip()
         is_construcao = 'constru' in status_lower or status_lower.startswith('6')
         is_na = observacao == 'N/A'
+        
+        # IGNORAR chamados de problemas (status 1 e 2) - só considerar checklist manual
+        is_problema_ativo = chamado['status'] in ['1. Implantado com problema', '2. Implantado refazendo']
+        if is_problema_ativo:
+            continue  # Pula este chamado, não impacta o checklist
 
         if 'batida' in cat:
             if is_na:
@@ -819,16 +824,20 @@ with tab_checklist:
                     cat_status = cat_info.get('status', '')
                     observacao = ''
                     
-                    # Busca a observação do chamado desta categoria
+                    # Busca a observação do chamado desta categoria (apenas se não for problema ativo)
                     if categoria in dados_cliente['categorias']:
                         # Busca a observação deste chamado específico
                         from database import get_db
                         with get_db() as conn:
                             cursor = conn.cursor()
-                            cursor.execute("SELECT observacao FROM chamados WHERE id = ?", (dados_cliente['categorias'][categoria]['chamado_id'],))
+                            cursor.execute("SELECT observacao, status FROM chamados WHERE id = ?", (dados_cliente['categorias'][categoria]['chamado_id'],))
                             obs_result = cursor.fetchone()
                             if obs_result:
-                                observacao = obs_result['observacao'] or ''
+                                # Ignorar se for chamado de problema ativo
+                                if obs_result['status'] in ['1. Implantado com problema', '2. Implantado refazendo']:
+                                    cat_status = ''  # Reset para tratar como OK
+                                else:
+                                    observacao = obs_result['observacao'] or ''
                     
                     # Mapear para opção do selectbox baseado no status e observação
                     opcoes = ["✓ OK", "✗ Problema", "🛠️ Em Construção", "N/A"]
@@ -839,7 +848,7 @@ with tab_checklist:
                         idx_atual = 3  # N/A
                     elif 'constru' in cat_status.lower() or cat_status == '8. Integração em construção':
                         idx_atual = 2  # Em Construção
-                    elif cat_status in ['3. Novo cliente sem integração', '5. Implantado sem integração', '6. Integração Parcial', '1. Implantado com problema', '2. Implantado refazendo']:
+                    elif cat_status in ['3. Novo cliente sem integração', '5. Implantado sem integração', '6. Integração Parcial']:
                         idx_atual = 1  # Problema
                     elif not cat_status or cat_status == '7. Status Normal':
                         idx_atual = 0  # OK
