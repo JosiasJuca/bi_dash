@@ -12,42 +12,176 @@ Sistema **simplificado e robusto** para gestão de integrações de clientes, us
 | ❌ Merges complexos e lentos | ✅ Consultas SQL rápidas e simples |
 | ❌ Fácil corromper dados | ✅ Transações atômicas (tudo ou nada) |
 | ❌ Difícil fazer backups | ✅ 1 arquivo = backup completo |
-| ❌ 600+ linhas de código | ✅ 300 linhas limpas e organizadas |
+| ❌ 600+ linhas de código | ✅ 400+ linhas limpas e organizadas |
 | ❌ Bugs de encoding e parsing | ✅ Tipos de dados garantidos pelo BD |
 
-### 🚀 Funcionalidades
+### 🚀 Funcionalidades Principais
 
-- ✅ Dashboard com KPIs e gráficos interativos
-- ✅ Gerenciamento de chamados (criar, resolver, reabrir)
-- ✅ Histórico completo de resoluções
-- ✅ Busca inteligente por clientes
-- ✅ Sistema de categorias e status
-- ✅ Checklist de integrações
-- ✅ Interface moderna e responsiva
+- ✅ **Dashboard Executivo** com KPIs e gráficos interativos
+- ✅ **Gestão Separada**: Checklist manual independente de chamados de problemas
+- ✅ **Chamados Ativos** com previsão de resolução e tracking completo
+- ✅ **Histórico Completo** de resoluções com possibilidade de reabertura
+- ✅ **Busca Inteligente** por clientes e filtros avançados
+- ✅ **Sistema de Categorias** para 7 tipos de integração
+- ✅ **Interface Responsiva** com layout organizado verticalmente
+
+### 📋 **Novos Recursos da Interface**
+
+#### **Layout Reorganizado**
+- **Chamados**: Primeira tabela com data de abertura e previsão de resolução
+- **Checklist de Integração**: Segunda tabela com status manual por categoria
+- **Separação Total**: Problemas ativos não impactam o checklist manual
+
+#### **Gestão de Previsões**
+- **Previsão Automática**: 7 dias a partir da data de abertura
+- **Previsão Manual**: Definível no formulário de criação
+- **Tracking Visual**: Acompanhamento direto na tabela principal
+
+#### **Checklist Independente**
+- **Controle Manual**: Configuração por categoria (Batida, Escala, Feriados, etc.)
+- **Estados**: ✓ OK, ✗ Problema, 🛠️ Em Construção, N/A
+- **Preservação**: Estado atual mantido entre edições
 
 ---
 
-## 📦 Instalação
+## 📦 Instalação e Execução
 
 ### 1. Pré-requisitos
 
 ```powershell
-# As bibliotecas já devem estar instaladas no projeto principal
-# Caso precise reinstalar:
+# Instalar dependências
 pip install streamlit pandas plotly
 ```
 
-### 2. Migração dos Dados Antigos (Primeira Vez)
+### 2. Execução
 
 ```powershell
-# Entre na pasta do projeto v2
-cd "Bi_integracao_v2"
+# Navegar até a pasta do projeto
+cd "caminho/para/bi_dash"
 
-# Execute o script de migração
-python migrar_dados.py
+# Executar o dashboard
+streamlit run bi_v2.py
 ```
 
-Este script vai:
+### 3. Acesso
+
+- **URL Local**: http://localhost:8501
+- **Interface**: Navegador web (Chrome, Firefox, Edge)
+
+---
+
+## 🏗️ Estrutura do Projeto
+
+### **Arquivos Principais**
+```
+bi_v2.py          # Interface principal (Streamlit)
+database.py       # Camada de dados (SQLite)
+integracoes.db    # Banco de dados
+requirements.txt  # Dependências Python
+README.md         # Este arquivo
+```
+
+### **Scripts Auxiliares**
+```
+scripts/
+  └── rename_statuses_simple.py  # Utilitário para renomear status
+```
+
+---
+
+## 🎭 Guia de Uso
+
+### **1. Dashboard** 
+- **KPIs**: Visão geral dos números principais
+- **Gráficos**: Distribuição por status e categoria
+- **Tabelas**: Chamados ativos e checklist de integração
+- **Filtros**: Por status, cliente e responsável
+
+### **2. Checklist** 
+- **Gerenciamento**: Configuração manual por cliente
+- **Estados**: Definição do status de cada categoria
+- **Responsáveis**: Atribuição (Guilherme, Eduardo, Marcelo)
+- **Administração**: Ferramentas de limpeza em lote
+
+### **3. Chamados Ativos**
+- **Criação**: Formulário completo com previsão
+- **Gestão**: Resolução e acompanhamento
+- **Status**: Apenas problemas ativos (status 1 e 2)
+- **Tracking**: Data de abertura e previsão visíveis
+
+### **4. Histórico**
+- **Consulta**: Todos os chamados resolvidos
+- **Reabertura**: Possibilidade de reativar chamados
+- **Busca**: Filtro por cliente
+
+---
+
+## 🔧 Status e Categorias
+
+### **Status de Checklist (Manual)**
+- `3. Novo cliente sem integração`
+- `5. Implantado sem integração` 
+- `6. Integração Parcial`
+- `8. Integração em construção`
+
+### **Status de Problemas (Chamados Ativos)**
+- `1. Implantado com problema`
+- `2. Implantado refazendo`
+
+### **Categorias de Integração**
+- **Batida**: Controle de ponto
+- **Escala**: Gerenciamento de horários
+- **Feriados**: Calendário corporativo
+- **Funcionários**: Cadastro de pessoal
+- **PDV**: Pontos de venda
+- **Venda**: Sistema comercial
+- **SSO**: Single Sign-On
+
+---
+
+## 💾 Backup e Manutenção
+
+### **Backup Automático**
+- **Download**: Botão no rodapé para baixar integracoes.db
+- **Frequência**: Recomendado semanalmente
+- **Localização**: Arquivo único contém todos os dados
+
+### **Manutenção**
+- **Limpeza**: Ferramentas na aba Checklist para remoção em lote
+- **Scripts**: Pasta `scripts/` com utilitários diversos
+- **Logs**: Sistema auto-contido sem logs externos
+
+---
+
+## 🎯 Melhorias da v2.0
+
+### **Separação Inteligente**
+- **Checklist Manual**: Não é afetado por chamados de problema
+- **Chamados Ativos**: Sistema independente para problemas técnicos
+- **Dados Limpos**: Cada área tem propósito específico
+
+### **Interface Aprimorada**
+- **Layout Vertical**: Tabelas organizadas uma embaixo da outra
+- **Colunas Novas**: Data de abertura e previsão de resolução
+- **Performance**: Consultas otimizadas e interface responsiva
+
+### **Funcionalidades Avançadas**
+- **Previsão Inteligente**: Cálculo automático ou manual
+- **Estado Preservado**: Configurações mantidas entre sessões
+- **Filtros Avançados**: Múltiplas dimensões de busca
+
+---
+
+## 📞 Suporte
+
+Para dúvidas ou problemas:
+1. Verificar este README.md
+2. Consultar documentação técnica em `/docs`
+3. Contatar a equipe de desenvolvimento
+
+**Versão**: 2.0  
+**Data**: Fevereiro 2026  
+**Desenvolvido por**: Moavi © 2026
 - ✅ Criar o banco de dados SQLite
 - ✅ Importar todos os clientes de `todos_clientes.csv`
 - ✅ Importar todos os chamados de `integracoes.csv`
@@ -251,13 +385,3 @@ prioridade = st.selectbox("Prioridade", ["Baixa", "Média", "Alta"])
 ```
 
 ---
-
-## 🎉 Pronto!
-
-Agora você tem um sistema **moderno, rápido e confiável** para gerenciar suas integrações.
-
-**Dúvidas?** Consulte os comentários no código ou entre em contato.
-
----
-
-**Desenvolvido com ❤️ usando Streamlit, SQLite e Python**

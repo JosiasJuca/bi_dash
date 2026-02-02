@@ -13,7 +13,7 @@ from database import (
     listar_chamados_resolvidos, obter_estatisticas, buscar_cliente_por_nome,
     excluir_chamado, excluir_cliente, atualizar_classificacao, 
     atualizar_cliente_checklist, limpar_checklist_cliente, listar_chamados_problemas,
-    deletar_chamados_por_status, deletar_chamados_por_cliente
+    deletar_chamados_por_status, deletar_chamados_por_cliente, atualizar_etapa_chamado
 )
 
 
@@ -56,6 +56,15 @@ STATUS_OPTIONS = [
 ]
 
 CATEGORIAS = ["Batida", "Escala", "Feriados", "Funcionários", "PDV", "Venda", "SSO", "Geral"]
+
+ETAPAS_CHAMADO = [
+    "Não iniciado",
+    "Aguardando Cliente",
+    "Aguardando Moavi",
+    "Em andamento",
+    "Aguardando teste",
+    "Pronto para finalizar"
+]
 
 CORES_STATUS = {
     "1. Implantado com problema": "#143D6B",
@@ -363,6 +372,7 @@ with tab_dashboard:
         table_html += '<th style="padding: 10px; text-align: left; color: #888; font-size: 11px;">CATEGORIA</th>'
         table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">DATA ABERTURA</th>'
         table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">PREVISÃO RESOLUÇÃO</th>'
+        table_html += '<th style="padding: 10px; text-align: center; color: #888; font-size: 11px;">ETAPA</th>'
         table_html += '<th style="padding: 10px; text-align: left; color: #888; font-size: 11px;">OBSERVAÇÃO</th>'
         table_html += '</tr></thead><tbody>'
         
@@ -375,12 +385,22 @@ with tab_dashboard:
             
             previsao = calcular_previsao(chamado["data_abertura"], chamado.get("observacao", ""))
             
+            # Estilo para a etapa baseado no valor
+            etapa = chamado.get('etapa', 'Não iniciado')
+            etapa_styles = {
+                "Não iniciado": "#f8f9fa",
+                "Aguardando Cliente": "#fff3cd",
+                "Aguardando Moavi": "#d1ecf1"
+            }
+            etapa_bg = etapa_styles.get(etapa, "#f8f9fa")
+            
             table_html += '<tr style="border-bottom: 1px solid #e0e0e0;">'
             table_html += f'<td style="padding: 10px; color: #111;">{chamado["cliente"]}</td>'
             table_html += f'<td style="padding: 10px; text-align: center;">{status_badge(chamado["status"])}</td>'
             table_html += f'<td style="padding: 10px; color: #111;">{chamado["categoria"]}</td>'
             table_html += f'<td style="padding: 10px; text-align: center; color: #666;">{data_formatada}</td>'
             table_html += f'<td style="padding: 10px; text-align: center; color: #666; font-weight: bold;">{previsao}</td>'
+            table_html += f'<td style="padding: 10px; text-align: center; background-color: {etapa_bg}; color: #333; font-weight: 500; border-radius: 4px;">{etapa}</td>'
             table_html += f'<td style="padding: 10px; color: #333; font-size: 13px;">{chamado.get("observacao", "") or "-"}</td>'
             table_html += '</tr>'
         
@@ -937,6 +957,9 @@ with tab_chamados:
                 previsao_default = date.today() + timedelta(days=7)
                 previsao_resolucao = st.date_input("Previsão de Resolução", value=previsao_default)
                 
+                # Seleção de etapa
+                etapa_sel = st.selectbox("Etapa", ETAPAS_CHAMADO)
+                
                 observacao = st.text_area("Observação")
             
             if st.form_submit_button("💾 Criar Chamado", use_container_width=True):
@@ -965,7 +988,8 @@ with tab_chamados:
                         status=status_sel,
                         categoria=categoria_sel,
                         observacao=observacao_completa,
-                        data_abertura=data_abertura.isoformat()
+                        data_abertura=data_abertura.isoformat(),
+                        etapa=etapa_sel
                     )
                     
                     st.success("✅ Chamado criado com sucesso!")
@@ -1014,11 +1038,42 @@ with tab_chamados:
                     st.markdown(f"### {chamado['cliente']}")
                     st.markdown(status_badge(chamado['status']), unsafe_allow_html=True)
                     st.markdown(f"**Categoria:** {chamado['categoria']}")
+                    
+                    # Exibir etapa atual com destaque
+                    etapa_atual = chamado.get('etapa', 'Não iniciado')
+                    etapa_styles = {
+                        "Não iniciado": "#f8f9fa",
+                        "Aguardando Cliente": "#fff3cd",
+                        "Aguardando Moavi": "#d1ecf1"
+                    }
+                    etapa_bg = etapa_styles.get(etapa_atual, "#f8f9fa")
+                    st.markdown(
+                        f'**Etapa atual:** <span style="background-color: {etapa_bg}; padding: 4px 8px; border-radius: 4px; font-weight: 500;">{etapa_atual}</span>',
+                        unsafe_allow_html=True
+                    )
+                    
                     if chamado['observacao']:
                         st.markdown(f"**Obs:** {chamado['observacao']}")
                     st.caption(f"Aberto em: {chamado['data_abertura']}")
                 
                 with col_acoes:
+                    # Seção para atualizar etapa
+                    with st.expander("🔄 Atualizar Etapa"):
+                        nova_etapa = st.selectbox(
+                            "Nova etapa",
+                            ETAPAS_CHAMADO,
+                            index=ETAPAS_CHAMADO.index(etapa_atual) if etapa_atual in ETAPAS_CHAMADO else 0,
+                            key=f"etapa_{chamado['chamado_id']}"
+                        )
+                        if st.button("✅ Atualizar Etapa", key=f"btn_etapa_{chamado['chamado_id']}", use_container_width=True):
+                            try:
+                                atualizar_etapa_chamado(chamado['chamado_id'], nova_etapa)
+                                st.success(f"Etapa atualizada para: {nova_etapa}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro ao atualizar etapa: {e}")
+                    
+                    # Seção para resolver chamado
                     with st.form(f"form_resolver_{chamado['chamado_id']}"):
                         resolucao_txt = st.text_area("O que foi resolvido?", key=f"resolucao_{chamado['chamado_id']}")
                         if st.form_submit_button("✅ Resolver", use_container_width=True):

@@ -52,18 +52,27 @@ def init_db():
                 data_abertura DATE NOT NULL,
                 data_resolucao DATE,
                 status_original TEXT,
+                etapa TEXT DEFAULT 'Não iniciado',
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (cliente_id) REFERENCES clientes(id)
             )
         """)
         
+        # Migração: Adicionar coluna etapa se não existir
+        try:
+            cursor.execute("SELECT etapa FROM chamados LIMIT 1")
+        except sqlite3.OperationalError:
+            # Coluna não existe, vamos adicioná-la
+            cursor.execute("ALTER TABLE chamados ADD COLUMN etapa TEXT DEFAULT 'Não iniciado'")
+            print("Coluna 'etapa' adicionada a tabela chamados!")
+        
         # Índices para performance
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chamados_cliente ON chamados(cliente_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chamados_status ON chamados(status)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chamados_categoria ON chamados(categoria)")
         
-        print("✅ Banco de dados inicializado!")
+        print("Banco de dados inicializado!")
 
 # ==================== FUNÇÕES DE CLIENTE ====================
 
@@ -91,7 +100,7 @@ def buscar_cliente_por_nome(nome):
 
 # ==================== FUNÇÕES DE CHAMADO ====================
 
-def adicionar_chamado(cliente_id, status, categoria, observacao="", data_abertura=None):
+def adicionar_chamado(cliente_id, status, categoria, observacao="", data_abertura=None, etapa="Não iniciado"):
     """Adiciona um novo chamado"""
     if data_abertura is None:
         data_abertura = datetime.now().date().isoformat()
@@ -99,9 +108,9 @@ def adicionar_chamado(cliente_id, status, categoria, observacao="", data_abertur
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO chamados (cliente_id, status, categoria, observacao, data_abertura)
-            VALUES (?, ?, ?, ?, ?)
-        """, (cliente_id, status, categoria, observacao, data_abertura))
+            INSERT INTO chamados (cliente_id, status, categoria, observacao, data_abertura, etapa)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (cliente_id, status, categoria, observacao, data_abertura, etapa))
         return cursor.lastrowid
 
 def resolver_chamado(chamado_id, data_resolucao=None):
@@ -150,7 +159,7 @@ def listar_chamados_abertos():
         cursor = conn.cursor()
         cursor.execute("""
             SELECT c.id, c.nome as cliente, c.classificacao as classificacao, ch.id as chamado_id, ch.status, 
-                   ch.categoria, ch.observacao, ch.data_abertura, ch.data_resolucao
+                   ch.categoria, ch.observacao, ch.data_abertura, ch.data_resolucao, ch.etapa
             FROM chamados ch
             JOIN clientes c ON ch.cliente_id = c.id
             WHERE (ch.data_resolucao IS NULL OR ch.data_resolucao = '')
@@ -166,7 +175,7 @@ def listar_chamados_abertos_completos():
         cursor = conn.cursor()
         cursor.execute("""
             SELECT c.id, c.nome as cliente, c.classificacao as classificacao, ch.id as id, ch.status, 
-                   ch.categoria, ch.observacao, ch.data_abertura, ch.data_resolucao
+                   ch.categoria, ch.observacao, ch.data_abertura, ch.data_resolucao, ch.etapa
             FROM chamados ch
             JOIN clientes c ON ch.cliente_id = c.id
             WHERE ch.data_resolucao IS NULL OR ch.data_resolucao = ''
@@ -180,7 +189,7 @@ def listar_chamados_problemas():
         cursor = conn.cursor()
         cursor.execute("""
             SELECT c.id, c.nome as cliente, c.classificacao as classificacao, ch.id as chamado_id, ch.status, 
-                   ch.categoria, ch.observacao, ch.data_abertura, ch.data_resolucao
+                   ch.categoria, ch.observacao, ch.data_abertura, ch.data_resolucao, ch.etapa
             FROM chamados ch
             JOIN clientes c ON ch.cliente_id = c.id
             WHERE (ch.data_resolucao IS NULL OR ch.data_resolucao = '')
@@ -197,7 +206,7 @@ def listar_chamados_resolvidos():
         cursor = conn.cursor()
         cursor.execute("""
             SELECT c.id, c.nome as cliente, c.classificacao as classificacao, ch.id as chamado_id, ch.status, 
-                   ch.categoria, ch.observacao, ch.resolucao, ch.data_abertura, ch.data_resolucao
+                   ch.categoria, ch.observacao, ch.resolucao, ch.data_abertura, ch.data_resolucao, ch.etapa
             FROM chamados ch
             JOIN clientes c ON ch.cliente_id = c.id
             WHERE ch.data_resolucao IS NOT NULL
@@ -206,6 +215,18 @@ def listar_chamados_resolvidos():
             ORDER BY ch.data_resolucao DESC
         """)
         return [dict(row) for row in cursor.fetchall()]
+
+def atualizar_etapa_chamado(chamado_id, nova_etapa):
+    """Atualiza a etapa de andamento de um chamado"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE chamados 
+            SET etapa = ?, 
+                atualizado_em = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (nova_etapa, chamado_id))
+        return cursor.rowcount > 0
 
 def atualizar_classificacao(cliente_id, classificacao):
     """Atualiza a classificacao de um cliente"""
