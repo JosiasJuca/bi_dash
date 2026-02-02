@@ -18,24 +18,24 @@ from database import (
 
 
 # ==================== PROTEÇÃO POR SENHA ====================
-# if 'autenticado' not in st.session_state:
-#     st.session_state['autenticado'] = False
+if 'autenticado' not in st.session_state:
+    st.session_state['autenticado'] = False
 
-# SENHA_CORRETA = os.environ.get('DASH_SENHA')
-# if not SENHA_CORRETA:
-#     st.error('A senha do dashboard não está configurada. Defina a variável de ambiente DASH_SENHA.')
-#     st.stop()
+SENHA_CORRETA = os.environ.get('DASH_SENHA')
+if not SENHA_CORRETA:
+    st.error('A senha do dashboard não está configurada. Defina a variável de ambiente DASH_SENHA.')
+    st.stop()
 
-# if not st.session_state['autenticado']:
-#     st.title('🔒 Acesso Restrito')
-#     senha = st.text_input('Digite a senha para acessar o dashboard:', type='password')
-#     if st.button('Entrar'):
-#         if senha == SENHA_CORRETA:
-#             st.session_state['autenticado'] = True
-#             st.rerun()
-#         else:
-#             st.error('Senha incorreta!')
-#     st.stop()
+if not st.session_state['autenticado']:
+    st.title('🔒 Acesso Restrito')
+    senha = st.text_input('Digite a senha para acessar o dashboard:', type='password')
+    if st.button('Entrar'):
+        if senha == SENHA_CORRETA:
+            st.session_state['autenticado'] = True
+            st.rerun()
+        else:
+            st.error('Senha incorreta!')
+    st.stop()
 
 
 # ==================== CONFIGURAÇÃO ====================
