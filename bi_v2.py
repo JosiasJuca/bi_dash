@@ -699,6 +699,94 @@ with tab_dashboard:
     else:
         st.info("Nenhum chamado registrado ainda.")
 
+# ==================== ABA REGRAS / PASSO A PASSO ====================
+with tab_regras:
+    st.title(" Passo a passo integrações")
+    
+    st.markdown("""
+    Este painel consolida o **Passo a passo integrações**. Siga os passos para uma melhor análise de divergências.""")
+
+    # --- FLUXO PRINCIPAL COM CORES ---
+    st.markdown("###  Fluxo de Investigação")
+    
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.info("**1. Site do Cliente**")
+        st.caption("Validar se a divergência existe na ponta.")
+    with c2:
+        st.success("**2. Servidor SFTP**")
+        st.caption("Verificar se o dado bruto foi enviado ao FileZilla.")
+    with c3:
+        st.warning("**3. Conformidade**")
+        st.caption("Comparar conteúdo do arquivo vs. registro esperado.")
+
+    st.markdown("---")
+
+    # --- TABELA DE ARQUIVOS ---
+    st.markdown("###  Inteligência de Arquivos")
+    
+    df_metodos = pd.DataFrame({
+        "Formato": ["AFD / Variações", "AFDT", "Tipo Moavi"],
+        "Ação de Investigação": [
+            "Usar comandos de busca de texto ou Data Studio.",
+            "Filtrar por padrões de Timestamp e ID de cliente.",
+            "Análise via delimitador (CSV, ; ou |)."
+        ],
+        
+    })
+    
+    # st.dataframe permite um visual mais moderno que st.table em alguns temas
+    st.table(df_metodos)
+
+    # --- CHECKLIST E MODELO DE E-MAIL ---
+    col_check, col_email = st.columns([1, 1])
+
+    with col_check:
+        with st.expander(" Checklist de Auditoria", expanded=True):
+            st.checkbox("Absenteísmo confirmado no Site", key="reg_1")
+            st.checkbox("Arquivos presentes no FileZilla", key="reg_2")
+            st.checkbox("Registro de ponto encontrado no arquivo", key="reg_3")
+            st.checkbox("Dados íntegros no Banco de Dados", key="reg_4")
+
+    with col_email:
+        with st.expander(" Modelo de Notificação", expanded=False):
+            st.markdown("Copie o texto abaixo caso as batidas não constem no arquivo:")
+            st.code("""
+Assunto: Inconsistência no envio de batidas - [Cliente]
+
+Prezado responsável,
+
+Identificamos que nos últimos [N] dias, os arquivos 
+enviados via integração não contém as marcações 
+de ponto dos colaboradores.
+
+Poderia verificar o envio na origem?
+            """, language="text")
+
+    # --- DICAS E IMAGENS ---
+    st.markdown("---")
+    
+    st.subheader(" Documentação Visual")
+    
+    img_dir = os.path.join(os.path.dirname(__file__), "img")
+    
+    images = [
+        ("Diretório FileZilla", "CaminhoPASTA.png", 220),
+        ("Estrutura Moavi (CSV)", "ExpBATIDAS2.png", 520),
+        ("Estrutura AFD (TXT)", "ExpBATIDAS_AFD.png", 440)
+    ]
+
+    cols = st.columns([1, 2, 2])
+
+    for i, (label, filename, w) in enumerate(images):
+        full_path = os.path.join(img_dir, filename)
+        with cols[i]:
+            if os.path.exists(full_path):
+                st.markdown(f"**{label}**")
+                st.image(full_path, width=w, use_container_width=False)
+            else:
+                st.warning(f"Imagem ausente: {filename}")
+
 # ==================== ABA GERENCIAMENTO (PROTEGIDA) ====================
 with tab_gerenciamento:
     # Proteção por senha para a aba Gerenciamento
@@ -1008,94 +1096,7 @@ with tab_gerenciamento:
                                 except Exception as e:
                                     st.error(f"❌ Erro ao excluir cliente: {e}")
 
-        # ==================== ABA REGRAS / PASSO A PASSO ====================
-        with tab_regras:
-            st.title(" Passo a passo integrações")
-            
-            st.markdown("""
-            Este painel consolida o **Passo a passo integrações**. Siga os passos para uma melhor análise de divergências.""")
 
-            # --- FLUXO PRINCIPAL COM CORES ---
-            st.markdown("###  Fluxo de Investigação")
-            
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                st.info("**1. Site do Cliente**")
-                st.caption("Validar se a divergência existe na ponta.")
-            with c2:
-                st.success("**2. Servidor SFTP**")
-                st.caption("Verificar se o dado bruto foi enviado ao FileZilla.")
-            with c3:
-                st.warning("**3. Conformidade**")
-                st.caption("Comparar conteúdo do arquivo vs. registro esperado.")
-
-            st.markdown("---")
-
-            # --- TABELA DE ARQUIVOS ---
-            st.markdown("###  Inteligência de Arquivos")
-            
-            df_metodos = pd.DataFrame({
-                "Formato": ["AFD / Variações", "AFDT", "Tipo Moavi"],
-                "Ação de Investigação": [
-                    "Usar comandos de busca de texto ou Data Studio.",
-                    "Filtrar por padrões de Timestamp e ID de cliente.",
-                    "Análise via delimitador (CSV, ; ou |)."
-                ],
-                
-            })
-            
-            # st.dataframe permite um visual mais moderno que st.table em alguns temas
-            st.table(df_metodos)
-
-            # --- CHECKLIST E MODELO DE E-MAIL ---
-            col_check, col_email = st.columns([1, 1])
-
-            with col_check:
-                with st.expander(" Checklist de Auditoria", expanded=True):
-                    st.checkbox("Absenteísmo confirmado no Site", key="reg_1")
-                    st.checkbox("Arquivos presentes no FileZilla", key="reg_2")
-                    st.checkbox("Registro de ponto encontrado no arquivo", key="reg_3")
-                    st.checkbox("Dados íntegros no Banco de Dados", key="reg_4")
-
-            with col_email:
-                with st.expander(" Modelo de Notificação", expanded=False):
-                    st.markdown("Copie o texto abaixo caso as batidas não constem no arquivo:")
-                    st.code("""
-Assunto: Inconsistência no envio de batidas - [Cliente]
-
-Prezado responsável,
-
-Identificamos que nos últimos [N] dias, os arquivos 
-enviados via integração não contém as marcações 
-de ponto dos colaboradores.
-
-Poderia verificar o envio na origem?
-            """, language="text")
-
-            # --- DICAS E IMAGENS ---
-            st.markdown("---")
-            
-            st.subheader(" Documentação Visual")
-            
-            img_dir = os.path.join(os.path.dirname(__file__), "img")
-            
-            images = [
-                ("Diretório FileZilla", "CaminhoPASTA.png", 220),
-                ("Estrutura Moavi (CSV)", "ExpBATIDAS2.png", 520),
-                ("Estrutura AFD (TXT)", "ExpBATIDAS_AFD.png", 440)
-            ]
-
-            cols = st.columns([1, 2, 2])
-
-            for i, (label, filename, w) in enumerate(images):
-                full_path = os.path.join(img_dir, filename)
-                with cols[i]:
-                    if os.path.exists(full_path):
-                        st.markdown(f"**{label}**")
-                        st.image(full_path, width=w, use_container_width=False)
-                    else:
-                        st.warning(f"Imagem ausente: {filename}")
-        
         # ==================== ABA CHAMADOS ATIVOS ====================
         with tab_chamados:
             st.subheader("🎫 Gerenciar Chamados Ativos")
