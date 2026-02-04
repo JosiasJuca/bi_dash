@@ -235,7 +235,7 @@ def status_badge(status):
 st.title(" BI de Integrações")
 
 # Abas principais
-tab_dashboard, tab_gerenciamento, tab_regras = st.tabs([
+tab_dashboard, tab_regras , tab_gerenciamento, = st.tabs([
     "Dashboard",
     "📖 Regras",
     "🔒 Gerenciamento"
