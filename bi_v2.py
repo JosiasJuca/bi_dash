@@ -195,12 +195,12 @@ def status_badge(status):
 st.title(" BI de Integrações")
 
 # Abas principais
-tab_dashboard, tab_checklist, tab_regras, tab_chamados, tab_historico = st.tabs([
+tab_dashboard, tab_checklist, tab_chamados, tab_historico, tab_regras = st.tabs([
     "Dashboard",
     "Checklist",
-    "Regras",
     "Chamados Ativos",
-    "Histórico"
+    "Histórico",
+    "Regras"
 ])
 
 # ==================== ABA DASHBOARD ====================
@@ -1169,6 +1169,24 @@ with tab_chamados:
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"Erro ao atualizar etapa: {e}")
+                    
+                    # Seção para editar observação do chamado
+                    with st.expander("✏️ Editar Observação"):
+                        texto_atual = chamado.get('observacao', '') or ''
+                        novo_texto = st.text_area("Observação", value=texto_atual, key=f"edit_obs_{chamado['chamado_id']}")
+                        if st.button("💾 Salvar Observação", key=f"save_obs_{chamado['chamado_id']}", use_container_width=True):
+                            try:
+                                from database import get_db
+                                with get_db() as conn:
+                                    cursor = conn.cursor()
+                                    cursor.execute(
+                                        "UPDATE chamados SET observacao = ?, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?",
+                                        (novo_texto, chamado['chamado_id'])
+                                    )
+                                st.success("Observação atualizada!")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro ao salvar observação: {e}")
                     
                     # Seção para resolver chamado
                     with st.form(f"form_resolver_{chamado['chamado_id']}"):
