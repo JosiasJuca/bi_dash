@@ -235,8 +235,9 @@ def status_badge(status):
 st.title(" BI de Integrações")
 
 # Abas principais
-tab_dashboard, tab_gerenciamento = st.tabs([
+tab_dashboard, tab_gerenciamento, tab_regras = st.tabs([
     "Dashboard",
+    "📖 Regras",
     "🔒 Gerenciamento"
 ])
 
@@ -745,11 +746,10 @@ with tab_gerenciamento:
         st.info('Você está na área administrativa. Use com cuidado!')
         
         # Sub-abas dentro do Gerenciamento
-        tab_checklist, tab_chamados, tab_historico, tab_regras = st.tabs([
+        tab_checklist, tab_chamados, tab_historico = st.tabs([
             "📋 Checklist",
             "🎫 Chamados Ativos",
-            "📚 Histórico",
-            "📖 Regras"
+            "📚 Histórico"
         ])
 
         # ==================== ABA CHECKLIST ====================
