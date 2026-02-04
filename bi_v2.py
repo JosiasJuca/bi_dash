@@ -59,30 +59,30 @@ with st.sidebar:
         st.warning("⚠️ Variável de ambiente DASH_SENHA não encontrada")
         st.caption("Usando senha padrão ou configuração manual")
     
-    # Opção para sobrescrever a senha via interface
-    with st.expander("🔧 Configurar Senha Manualmente", expanded=not senha_env):
-        st.caption("Esta configuração sobrescreve a variável de ambiente")
-        nova_senha = st.text_input(
-            "Definir nova senha para o Gerenciamento:",
-            type="password",
-            placeholder="Digite a nova senha...",
-            help="Esta senha será usada para acessar a área de Gerenciamento"
-        )
+    # # Opção para sobrescrever a senha via interface
+    # with st.expander("🔧 Configurar Senha Manualmente", expanded=not senha_env):
+    #     st.caption("Esta configuração sobrescreve a variável de ambiente")
+    #     nova_senha = st.text_input(
+    #         "Definir nova senha para o Gerenciamento:",
+    #         type="password",
+    #         placeholder="Digite a nova senha...",
+    #         help="Esta senha será usada para acessar a área de Gerenciamento"
+    #     )
         
-        if st.button("💾 Salvar Nova Senha"):
-            if nova_senha:
-                st.session_state['senha_customizada'] = nova_senha
-                st.success("✅ Senha customizada salva!")
-                st.rerun()
-            else:
-                st.error("Digite uma senha válida")
+    #     if st.button("💾 Salvar Nova Senha"):
+    #         if nova_senha:
+    #             st.session_state['senha_customizada'] = nova_senha
+    #             st.success("✅ Senha customizada salva!")
+    #             st.rerun()
+    #         else:
+    #             st.error("Digite uma senha válida")
         
-        if 'senha_customizada' in st.session_state:
-            st.info("🔒 Senha customizada ativa")
-            if st.button("🗑️ Remover Senha Customizada"):
-                del st.session_state['senha_customizada']
-                st.success("Senha customizada removida!")
-                st.rerun()
+    #     if 'senha_customizada' in st.session_state:
+    #         st.info("🔒 Senha customizada ativa")
+    #         if st.button("🗑️ Remover Senha Customizada"):
+    #             del st.session_state['senha_customizada']
+    #             st.success("Senha customizada removida!")
+    #             st.rerun()
 
 
 # ==================== CONSTANTES ====================
