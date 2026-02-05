@@ -50,7 +50,9 @@ def get_create_table_sql():
                 column_definitions.append(f"{column} {definition}")
         
         all_definitions = column_definitions + foreign_keys
-        query = f"CREATE TABLE IF NOT EXISTS {table_name} (\n    {',\\n    '.join(all_definitions)}\n);"
+        sep = ',\n    '
+        joined = sep.join(all_definitions)
+        query = f"CREATE TABLE IF NOT EXISTS {table_name} (\n    {joined}\n);"
         queries.append(query)
     
     return queries
