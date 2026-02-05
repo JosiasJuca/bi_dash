@@ -129,10 +129,10 @@ def renderizar_header_gerenciamento():
     col_title, col_logout = st.columns([3, 1])
     
     with col_title:
-        st.subheader('🛠️ Área de Gerenciamento')
+        st.subheader(' Área de Gerenciamento')
     
     with col_logout:
-        if st.button('🚪 Sair', key='logout_gerenciamento'):
+        if st.button('Sair', key='logout_gerenciamento'):
             logout()
             st.rerun()
     

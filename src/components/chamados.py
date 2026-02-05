@@ -14,7 +14,7 @@ from src.utils.helpers import status_badge, obter_estilos_etapa
 
 def renderizar_chamados():
     """Renderiza a aba de gestão de chamados ativos."""
-    st.subheader("🎫 Gerenciar Chamados Ativos")
+    st.subheader(" Gerenciar Chamados Ativos")
     
     # Formulário para novo chamado
     renderizar_formulario_novo_chamado()
@@ -27,7 +27,7 @@ def renderizar_chamados():
 
 def renderizar_formulario_novo_chamado():
     """Renderiza formulário para criação de novo chamado."""
-    with st.expander("➕ Adicionar Novo Chamado", expanded=False):
+    with st.expander(" Adicionar Novo Chamado", expanded=False):
         with st.form("form_novo_chamado"):
             col_f1, col_f2 = st.columns(2)
             
@@ -60,7 +60,7 @@ def renderizar_formulario_novo_chamado():
                 
                 observacao = st.text_area("Observação")
             
-            if st.form_submit_button("💾 Criar Chamado", use_container_width=True):
+            if st.form_submit_button(" Criar Chamado", use_container_width=True):
                 processar_novo_chamado(
                     cliente_sel, novo_cliente_nome if cliente_sel == "+ Novo Cliente" else None,
                     status_sel, categoria_sel, data_abertura, previsao_resolucao,
@@ -88,9 +88,9 @@ def processar_novo_chamado(cliente_sel, novo_cliente_nome, status_sel, categoria
         if cliente_sel == "+ Novo Cliente":
             if novo_cliente_nome:
                 cliente_id = adicionar_cliente(novo_cliente_nome)
-                st.success(f"✅ Cliente '{novo_cliente_nome}' criado!")
+                st.success(f" Cliente '{novo_cliente_nome}' criado!")
             else:
-                st.error("⚠️ Digite o nome do novo cliente")
+                st.error(" Digite o nome do novo cliente")
                 st.stop()
         else:
             cliente = buscar_cliente_por_nome(cliente_sel)
@@ -127,7 +127,7 @@ def renderizar_lista_chamados():
     chamados = listar_chamados_problemas()
     
     if not chamados:
-        st.info("🎉 Nenhum chamado aberto! Tudo funcionando perfeitamente.")
+        st.info(" Nenhum chamado aberto! Tudo funcionando perfeitamente.")
         return
     
     # Filtros
@@ -161,7 +161,7 @@ def renderizar_filtros_chamados(chamados):
         )
     
     with col_filtro2:
-        st.text_input("🔍 Buscar por cliente", placeholder="Digite o nome...", key="busca_nome_chamados")
+        st.text_input(" Buscar por cliente", placeholder="Digite o nome...", key="busca_nome_chamados")
 
 
 def aplicar_filtros_chamados(chamados):
@@ -227,14 +227,14 @@ def renderizar_acoes_chamado(chamado, etapa_atual):
         etapa_atual (str): Etapa atual do chamado
     """
     # Seção para atualizar etapa
-    with st.expander("🔄 Atualizar Etapa"):
+    with st.expander(" Atualizar Etapa"):
         nova_etapa = st.selectbox(
             "Nova etapa",
             ETAPAS_CHAMADO,
             index=ETAPAS_CHAMADO.index(etapa_atual) if etapa_atual in ETAPAS_CHAMADO else 0,
             key=f"etapa_{chamado['chamado_id']}"
         )
-        if st.button("✅ Atualizar Etapa", key=f"btn_etapa_{chamado['chamado_id']}", use_container_width=True):
+        if st.button(" Atualizar Etapa", key=f"btn_etapa_{chamado['chamado_id']}", use_container_width=True):
             try:
                 atualizar_etapa_chamado(chamado['chamado_id'], nova_etapa)
                 st.success(f"Etapa atualizada para: {nova_etapa}")
@@ -243,10 +243,10 @@ def renderizar_acoes_chamado(chamado, etapa_atual):
                 st.error(f"Erro ao atualizar etapa: {e}")
     
     # Seção para editar observação
-    with st.expander("✏️ Editar Observação"):
+    with st.expander(" Editar Observação"):
         texto_atual = chamado.get('observacao', '') or ''
         novo_texto = st.text_area("Observação", value=texto_atual, key=f"edit_obs_{chamado['chamado_id']}")
-        if st.button("💾 Salvar Observação", key=f"save_obs_{chamado['chamado_id']}", use_container_width=True):
+        if st.button(" Salvar Observação", key=f"save_obs_{chamado['chamado_id']}", use_container_width=True):
             try:
                 with get_db() as conn:
                     cursor = conn.cursor()
@@ -262,7 +262,7 @@ def renderizar_acoes_chamado(chamado, etapa_atual):
     # Seção para resolver chamado
     with st.form(f"form_resolver_{chamado['chamado_id']}"):
         resolucao_txt = st.text_area("O que foi resolvido?", key=f"resolucao_{chamado['chamado_id']}")
-        if st.form_submit_button("✅ Resolver", use_container_width=True):
+        if st.form_submit_button(" Resolver", use_container_width=True):
             if not resolucao_txt.strip():
                 st.warning("Descreva o que foi resolvido!")
                 st.stop()
@@ -283,7 +283,7 @@ def renderizar_acoes_chamado(chamado, etapa_atual):
             st.rerun()
     
     # Botão de exclusão
-    if st.button("🗑️ Excluir", key=f"excluir_ch_{chamado['chamado_id']}", type="secondary"):
+    if st.button(" Excluir", key=f"excluir_ch_{chamado['chamado_id']}", type="secondary"):
         if excluir_chamado(chamado['chamado_id']):
             st.success("❌ Chamado excluído!")
             st.rerun()

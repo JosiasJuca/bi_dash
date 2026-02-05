@@ -23,10 +23,10 @@ def renderizar_checklist():
     # Filtro de busca e botão adicionar
     col_search, col_add = st.columns([3, 1])
     with col_search:
-        busca_checklist = st.text_input("🔍 Buscar cliente", placeholder="Digite o nome...", key="busca_checklist")
+        busca_checklist = st.text_input(" Buscar cliente", placeholder="Digite o nome...", key="busca_checklist")
     with col_add:
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("➕ Adicionar Cliente Novo", use_container_width=True):
+        if st.button(" Adicionar Cliente Novo", use_container_width=True):
             st.session_state['show_add_modal'] = True
     
     # Modal para adicionar cliente
@@ -53,17 +53,17 @@ def renderizar_checklist():
 def renderizar_modal_adicionar_cliente():
     """Renderiza modal para adicionar novo cliente."""
     with st.form("form_add_cliente_checklist"):
-        st.markdown("### ➕ Adicionar Novo Cliente")
+        st.markdown("###  Adicionar Novo Cliente")
         novo_nome = st.text_input("Nome do Cliente")
         nova_class = st.selectbox("Responsável", RESPONSAVEIS)
         
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
-            if st.form_submit_button("✅ Adicionar", use_container_width=True):
+            if st.form_submit_button(" Adicionar", use_container_width=True):
                 if novo_nome:
                     try:
                         cliente_id = adicionar_cliente(novo_nome, nova_class)
-                        st.success(f"✅ Cliente '{novo_nome}' adicionado!")
+                        st.success(f" Cliente '{novo_nome}' adicionado!")
                         st.session_state['show_add_modal'] = False
                         st.rerun()
                     except Exception as e:
@@ -72,7 +72,7 @@ def renderizar_modal_adicionar_cliente():
                     st.warning("Digite um nome")
         
         with col_btn2:
-            if st.form_submit_button("❌ Cancelar", use_container_width=True):
+            if st.form_submit_button(" Cancelar", use_container_width=True):
                 st.session_state['show_add_modal'] = False
                 st.rerun()
 
@@ -99,9 +99,9 @@ def renderizar_secao_administracao():
             
             with col_del2:
                 st.markdown("<br>", unsafe_allow_html=True)
-                if st.button("🗑️ Apagar por Status", use_container_width=True, key="btn_apagar_status"):
+                if st.button(" Apagar por Status", use_container_width=True, key="btn_apagar_status"):
                     total_apagado = deletar_chamados_por_status(status_para_apagar)
-                    st.success(f"✅ {total_apagado} chamados com status '{status_para_apagar}' foram apagados!")
+                    st.success(f" {total_apagado} chamados com status '{status_para_apagar}' foram apagados!")
                     st.rerun()
         
         # Aba 2: Apagar por Cliente
@@ -121,11 +121,11 @@ def renderizar_secao_administracao():
             
             with col_del4:
                 st.markdown("<br>", unsafe_allow_html=True)
-                if st.button("🗑️ Apagar por Cliente", use_container_width=True, key="btn_apagar_cliente"):
+                if st.button(" Apagar por Cliente", use_container_width=True, key="btn_apagar_cliente"):
                     cliente_selecionado = next((c for c in todos_clientes_lista if c['nome'] == cliente_para_apagar), None)
                     if cliente_selecionado:
                         total_apagado = deletar_chamados_por_cliente(cliente_selecionado['id'])
-                        st.success(f"✅ {total_apagado} chamados do cliente '{cliente_para_apagar}' foram apagados!")
+                        st.success(f" {total_apagado} chamados do cliente '{cliente_para_apagar}' foram apagados!")
                         st.rerun()
 
 
@@ -187,7 +187,7 @@ def renderizar_card_cliente(cliente, chamados_por_cliente):
     dados_cliente = chamados_por_cliente.get(cliente_id, {'status': None, 'categorias': {}})
     status_atual = dados_cliente['status'] or '3. Novo cliente sem integração'
     
-    with st.expander(f"👤 {cliente_nome} • {cliente_class}", expanded=False):
+    with st.expander(f" {cliente_nome} • {cliente_class}", expanded=False):
         col_status, col_class = st.columns([2, 1])
         
         with col_status:
@@ -208,7 +208,7 @@ def renderizar_card_cliente(cliente, chamados_por_cliente):
                 key=f"class_check_{cliente_id}"
             )
             if nova_class != cliente_class:
-                if st.button("💾", key=f"save_class_{cliente_id}"):
+                if st.button("", key=f"save_class_{cliente_id}"):
                     if atualizar_classificacao(cliente_id, nova_class):
                         st.success("Responsável atualizado!")
                         st.rerun()
@@ -221,7 +221,7 @@ def renderizar_card_cliente(cliente, chamados_por_cliente):
         # Botões de ação
         col_save, col_del = st.columns([3, 1])
         with col_save:
-            if st.button("💾 Salvar Alterações", key=f"save_{cliente_id}", type="primary", use_container_width=True):
+            if st.button(" Salvar Alterações", key=f"save_{cliente_id}", type="primary", use_container_width=True):
                 try:
                     # Coletar dados das categorias
                     categorias_atualizadas = {}
@@ -236,25 +236,25 @@ def renderizar_card_cliente(cliente, chamados_por_cliente):
                         status_geral=novo_status,
                         categorias=categorias_atualizadas
                     )
-                    adicionar_mensagem_sucesso(f"✅ Checklist de {cliente_nome} atualizado!")
+                    adicionar_mensagem_sucesso(f" Checklist de {cliente_nome} atualizado!")
                     st.rerun()
                 except Exception as e:
-                    st.error(f"❌ Erro ao salvar: {e}")
+                    st.error(f" Erro ao salvar: {e}")
         
         with col_del:
             st.markdown("<br>", unsafe_allow_html=True)
             confirm = st.checkbox("Confirmar exclusão permanente deste cliente", key=f"confirm_excluir_{cliente_id}")
             if confirm:
-                if st.button("🗑️ Excluir Cliente", key=f"btn_excluir_cliente_{cliente_id}", type="secondary", use_container_width=True):
+                if st.button(" Excluir Cliente", key=f"btn_excluir_cliente_{cliente_id}", type="secondary", use_container_width=True):
                     try:
                         deleted = excluir_cliente(cliente_id)
                         if deleted:
-                            adicionar_mensagem_sucesso(f"✅ Cliente '{cliente_nome}' e todos os registros vinculados foram excluídos!")
+                            adicionar_mensagem_sucesso(f" Cliente '{cliente_nome}' e todos os registros vinculados foram excluídos!")
                             st.rerun()
                         else:
                             st.warning("Nenhum registro excluído. Verifique se o cliente ainda existe.")
                     except Exception as e:
-                        st.error(f"❌ Erro ao excluir cliente: {e}")
+                        st.error(f" Erro ao excluir cliente: {e}")
 
 
 def renderizar_grid_categorias(cliente_id, dados_cliente):
