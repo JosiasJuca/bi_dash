@@ -172,8 +172,14 @@ def renderizar_graficos_historico(data_inicio, data_fim):
         st.info(" Nenhum dado para gerar gráficos no período selecionado")
         return
     
-    # Converter para DataFrame
+    # Converter para DataFrame e filtrar apenas itens resolvidos
     df = pd.DataFrame(historico)
+    if 'data_resolucao' in df.columns:
+        df = df[df['data_resolucao'].notnull() & (df['data_resolucao'] != '')]
+
+    if df.empty:
+        st.info(" Nenhum registro resolvido no período para gerar gráficos")
+        return
 
     # Alinha os dois gráficos restantes na mesma linha
     col_clientes, col_evolucao = st.columns(2)
@@ -189,8 +195,32 @@ def renderizar_graficos_historico(data_inicio, data_fim):
         st.plotly_chart(fig_clientes, use_container_width=True)
 
     with col_evolucao:
-        st.subheader(" Evolução Temporal")
-        renderizar_grafico_evolucao_temporal(df)
+        st.subheader(" Evolução de Resoluções")
+        try:
+            # Agrupar por data_resolucao para mostrar quando os itens foram resolvidos
+            df_res = df.copy()
+            df_res['data_resolucao'] = pd.to_datetime(df_res['data_resolucao'])
+            df_res['data_apenas'] = df_res['data_resolucao'].dt.date
+            evolucao = df_res.groupby('data_apenas').size().reset_index(name='count')
+            evolucao = evolucao.sort_values('data_apenas')
+
+            import plotly.express as px
+
+            fig = px.line(
+                evolucao,
+                x='data_apenas',
+                y='count',
+                title='Resoluções por Dia',
+                markers=True
+            )
+            fig.update_layout(
+                xaxis_title="Data",
+                yaxis_title="Número de Resoluções",
+                showlegend=False
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        except Exception as e:
+            st.error(f"Erro ao gerar gráfico de evolução: {e}")
 
 
 def renderizar_grafico_evolucao_temporal(df):
@@ -245,10 +275,31 @@ def renderizar_chamados_resolvidos(data_inicio, data_fim):
         st.info(f" Nenhum chamado foi resolvido no período de {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
         return
     
-    st.markdown(f"** {len(resolvidos)} chamados foram resolvidos no período**")
-    
+    # ======= FILTROS PARA A SEÇÃO RESOLVIDOS =======
+    col_f1, col_f2, col_f3 = st.columns([2, 3, 2])
+
+    with col_f1:
+        buscar_cliente = st.text_input(" Buscar por cliente", value="", key="buscar_resolvidos_cliente")
+
+    with col_f2:
+        buscar_texto = st.text_input(" Buscar por texto (resolução/observação)", value="", key="buscar_resolvidos_texto")
+
+    with col_f3:
+        categorias_unicas = list(dict.fromkeys([r.get('categoria', '') for r in resolvidos]))
+        filtro_categoria = st.multiselect(" Filtrar por Categoria", options=categorias_unicas, key="filtrar_resolvidos_categoria")
+
+    # Aplica os filtros
+    resolvidos_filtrados = [
+        r for r in resolvidos
+        if (not buscar_cliente or buscar_cliente.lower() in (r.get('cliente') or '').lower())
+        and (not buscar_texto or buscar_texto.lower() in (r.get('resolucao') or '').lower() or buscar_texto.lower() in (r.get('observacao') or '').lower())
+        and (not filtro_categoria or r.get('categoria') in filtro_categoria)
+    ]
+
+    st.markdown(f"** {len(resolvidos_filtrados)} chamados foram resolvidos no período**")
+
     # Exibir chamados resolvidos
-    for resolvido in resolvidos:
+    for resolvido in resolvidos_filtrados:
         with st.container():
             col_info, col_tempo, col_btn = st.columns([4, 1, 1])
 
