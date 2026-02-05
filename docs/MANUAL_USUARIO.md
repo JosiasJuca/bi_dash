@@ -162,6 +162,3 @@ Este manual fornece instruções completas para uso do sistema BI Dashboard, uma
 - **Filtros**: Use filtros para melhor performance
 - **Atualizações**: Mantenha dados atualizados
 
----
-
-*Versão: 2.0 | Última Atualização: Fevereiro 2026*
