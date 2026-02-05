@@ -14,7 +14,7 @@ from src.components.charts import gerar_grafico_pizza
 
 def renderizar_historico():
     """Renderiza a aba de histórico e relatórios."""
-    st.subheader("📊 Histórico e Relatórios")
+    st.subheader(" Histórico e Relatórios")
     
     # Filtros de período
     col_periodo1, col_periodo2 = st.columns(2)
@@ -42,16 +42,13 @@ def renderizar_historico():
     
     st.divider()
     
-    # Tabs para diferentes visualizações
-    tab1, tab2, tab3 = st.tabs(["📜 Histórico", "📈 Gráficos", "🎯 Resolvidos"])
-    
-    with tab1:
-        renderizar_historico_detalhado(data_inicio, data_fim)
-    
-    with tab2:
+    # Tabs para diferentes visualizações — removida a aba 'Histórico'
+    tab_graficos, tab_resolvidos = st.tabs([" Gráficos", " Resolvidos"])
+
+    with tab_graficos:
         renderizar_graficos_historico(data_inicio, data_fim)
-    
-    with tab3:
+
+    with tab_resolvidos:
         renderizar_chamados_resolvidos(data_inicio, data_fim)
 
 
@@ -68,13 +65,13 @@ def renderizar_estatisticas_periodo(data_inicio, data_fim):
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("📊 Total de Registros", estatisticas['total_registros'])
+        st.metric(" Total de Registros", estatisticas['total_registros'])
     
     with col2:
-        st.metric("🎫 Chamados Abertos", estatisticas['chamados_problemas'])
+        st.metric(" Chamados Abertos", estatisticas['chamados_problemas'])
     
     with col3:
-        st.metric("✅ Resolvidos", estatisticas['resolvidos'])
+        st.metric(" Resolvidos", estatisticas['resolvidos'])
     
     with col4:
         taxa_resolucao = 0
@@ -82,7 +79,7 @@ def renderizar_estatisticas_periodo(data_inicio, data_fim):
             taxa_resolucao = round(
                 (estatisticas['resolvidos'] / estatisticas['total_registros']) * 100, 1
             )
-        st.metric("💪 Taxa de Resolução", f"{taxa_resolucao}%")
+        st.metric(" Taxa de Resolução", f"{taxa_resolucao}%")
 
 
 def renderizar_historico_detalhado(data_inicio, data_fim):
@@ -96,7 +93,7 @@ def renderizar_historico_detalhado(data_inicio, data_fim):
     historico = listar_historico_completo(data_inicio.isoformat(), data_fim.isoformat())
     
     if not historico:
-        st.info(f"📅 Nenhum registro encontrado no período de {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
+        st.info(f" Nenhum registro encontrado no período de {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
         return
     
     # Filtros adicionais
@@ -142,7 +139,7 @@ def renderizar_historico_detalhado(data_inicio, data_fim):
                     st.markdown(f"**Observação:** {registro['observacao']}")
                 
                 if registro['resolucao']:
-                    st.markdown(f"**✅ Resolução:** {registro['resolucao']}")
+                    st.markdown(f"** Resolução:** {registro['resolucao']}")
                     if registro['data_resolucao']:
                         st.caption(f"Resolvido em: {registro['data_resolucao']}")
             
@@ -156,7 +153,7 @@ def renderizar_historico_detalhado(data_inicio, data_fim):
                     data_criacao = datetime.strptime(registro['data_criacao'][:10], '%Y-%m-%d').date()
                     dias_aberto = (date.today() - data_criacao).days
                     if dias_aberto > 0:
-                        st.warning(f"⏰ {dias_aberto} dias em aberto")
+                        st.warning(f" {dias_aberto} dias em aberto")
             
             st.divider()
 
@@ -172,27 +169,17 @@ def renderizar_graficos_historico(data_inicio, data_fim):
     historico = listar_historico_completo(data_inicio.isoformat(), data_fim.isoformat())
     
     if not historico:
-        st.info("📊 Nenhum dado para gerar gráficos no período selecionado")
+        st.info(" Nenhum dado para gerar gráficos no período selecionado")
         return
     
     # Converter para DataFrame
     df = pd.DataFrame(historico)
-    
-    # Gráficos em colunas
-    col_graf1, col_graf2 = st.columns(2)
-    
-    with col_graf1:
-        st.subheader("📊 Distribuição por Status")
-        contagem_status = df['status'].value_counts()
-        fig_status = gerar_grafico_pizza(
-            list(contagem_status.values),
-            list(contagem_status.index),
-            "Distribuição por Status"
-        )
-        st.plotly_chart(fig_status, use_container_width=True)
-    
-    with col_graf2:
-        st.subheader("🏢 Distribuição por Cliente")
+
+    # Alinha os dois gráficos restantes na mesma linha
+    col_clientes, col_evolucao = st.columns(2)
+
+    with col_clientes:
+        st.subheader(" Distribuição por Cliente")
         contagem_clientes = df['cliente'].value_counts().head(10)  # Top 10 clientes
         fig_clientes = gerar_grafico_pizza(
             list(contagem_clientes.values),
@@ -200,10 +187,10 @@ def renderizar_graficos_historico(data_inicio, data_fim):
             "Top 10 Clientes"
         )
         st.plotly_chart(fig_clientes, use_container_width=True)
-    
-    # Gráfico de linha - Evolução temporal
-    st.subheader("📈 Evolução Temporal")
-    renderizar_grafico_evolucao_temporal(df)
+
+    with col_evolucao:
+        st.subheader(" Evolução Temporal")
+        renderizar_grafico_evolucao_temporal(df)
 
 
 def renderizar_grafico_evolucao_temporal(df):
@@ -255,53 +242,67 @@ def renderizar_chamados_resolvidos(data_inicio, data_fim):
     resolvidos = buscar_resolvidos_periodo(data_inicio.isoformat(), data_fim.isoformat())
     
     if not resolvidos:
-        st.info(f"🎉 Nenhum chamado foi resolvido no período de {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
+        st.info(f" Nenhum chamado foi resolvido no período de {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
         return
     
-    st.markdown(f"**✅ {len(resolvidos)} chamados foram resolvidos no período**")
+    st.markdown(f"** {len(resolvidos)} chamados foram resolvidos no período**")
     
     # Exibir chamados resolvidos
     for resolvido in resolvidos:
         with st.container():
-            col_info, col_tempo = st.columns([4, 1])
-            
+            col_info, col_tempo, col_btn = st.columns([4, 1, 1])
+
             with col_info:
                 st.markdown(f"### {resolvido['cliente']}")
-                
+
                 # Status original e atual
                 if resolvido.get('status_original'):
                     st.markdown(f"**Status anterior:** {resolvido['status_original']}")
                 st.markdown(status_badge(resolvido['status']), unsafe_allow_html=True)
-                
+
                 st.markdown(f"**Categoria:** {resolvido['categoria']}")
-                
+
                 if resolvido['resolucao']:
-                    st.markdown(f"**✅ Como foi resolvido:** {resolvido['resolucao']}")
-                
+                    st.markdown(f"** Como foi resolvido:** {resolvido['resolucao']}")
+
                 if resolvido['observacao']:
-                    with st.expander("👁️ Ver observações originais"):
+                    with st.expander(" Ver observações originais"):
                         st.markdown(resolvido['observacao'])
-            
+
             with col_tempo:
                 st.caption(f"**Aberto em:** {resolvido['data_criacao'][:10]}")
                 st.caption(f"**Resolvido em:** {resolvido['data_resolucao']}")
-                
+
                 # Calcular tempo de resolução
                 try:
                     data_abertura = datetime.strptime(resolvido['data_criacao'][:10], '%Y-%m-%d').date()
                     data_resolucao = datetime.strptime(resolvido['data_resolucao'], '%Y-%m-%d').date()
                     tempo_resolucao = (data_resolucao - data_abertura).days
-                    
+
                     if tempo_resolucao == 0:
-                        st.success("⚡ Resolvido no mesmo dia!")
+                        st.success(" Resolvido no mesmo dia!")
                     elif tempo_resolucao == 1:
-                        st.info("🚀 Resolvido em 1 dia")
+                        st.info(" Resolvido em 1 dia")
                     else:
-                        st.info(f"📅 Resolvido em {tempo_resolucao} dias")
-                        
+                        st.info(f" Resolvido em {tempo_resolucao} dias")
+
                 except Exception:
                     st.caption("Tempo não calculado")
-            
+
+            with col_btn:
+                # Botão para excluir chamado resolvido
+                from src.database.operations import excluir_chamado
+
+                if st.button(" Excluir", key=f"excluir_res_{resolvido['chamado_id']}", type="secondary"):
+                    try:
+                        if excluir_chamado(resolvido['chamado_id']):
+                            st.success("Chamado excluído com sucesso.")
+                            st.rerun()
+                        else:
+                            st.error("Falha ao excluir o chamado.")
+                    except Exception as e:
+                        st.error(f"Erro ao excluir: {e}")
+
             st.divider()
 
 

@@ -197,14 +197,14 @@ def renderizar_tabela_historico(historico):
             st.caption(f"Aberto: {chamado['data_abertura']} → Resolvido: {chamado['data_resolucao']}")
         
         with col_btn1:
-            if st.button("🔁", key=f"reabrir_{chamado['chamado_id']}", help="Reabrir chamado"):
+            if st.button("", key=f"reabrir_{chamado['chamado_id']}", help="Reabrir chamado"):
                 from src.database.operations import reabrir_chamado
                 reabrir_chamado(chamado['chamado_id'])
                 st.success("Chamado reaberto!")
                 st.rerun()
         
         with col_btn2:
-            if st.button("🗑️", key=f"excluir_hist_{chamado['chamado_id']}", help="Excluir chamado", type="secondary"):
+            if st.button("", key=f"excluir_hist_{chamado['chamado_id']}", help="Excluir chamado", type="secondary"):
                 from src.database.operations import excluir_chamado
                 if excluir_chamado(chamado['chamado_id']):
                     st.success("Excluído!")

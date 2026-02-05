@@ -2,7 +2,6 @@
 Componente da aba Regras e Passo a Passo.
 """
 import streamlit as st
-import pandas as pd
 import os
 import re
 from datetime import datetime
@@ -29,22 +28,7 @@ def renderizar_fluxo_investigacao():
     with c3:
         st.warning("**3. Conformidade**")
         st.caption("Comparar conteúdo do arquivo vs. registro esperado.")
-
-
-def renderizar_inteligencia_arquivos():
-    """Renderiza a tabela de inteligência de arquivos."""
-    st.markdown("###  Inteligência de Arquivos")
-    
-    df_metodos = pd.DataFrame({
-        "Formato": ["AFD / Variações", "AFDT", "Tipo Moavi"],
-        "Ação de Investigação": [
-            "Usar comandos de busca de texto ou Data Studio.",
-            "Filtrar por padrões de Timestamp e ID de cliente.",
-            "Análise via delimitador (CSV, ; ou |)."
-        ]
-    })
-    
-    st.table(df_metodos)
+    # Observações: tabela de passos removida conforme solicitado
 
 
 def renderizar_checklist_e_email():
@@ -63,35 +47,34 @@ def renderizar_checklist_auditoria():
     with st.expander(" Checklist de Auditoria", expanded=True):
         st.checkbox("Absenteísmo confirmado no Site", key="reg_1")
         st.checkbox("Arquivos presentes no FileZilla", key="reg_2")
-        st.checkbox("Registro de ponto encontrado no arquivo", key="reg_3")
-        st.checkbox("Dados íntegros no Banco de Dados", key="reg_4")
+        st.checkbox("Registro de ponto não encontrado no arquivo", key="reg_3")
+    
 
 
 def renderizar_modelo_email():
     """Renderiza modelo de e-mail para notificação."""
     with st.expander(" Modelo de Notificação", expanded=False):
-        st.markdown("Copie o texto abaixo caso as batidas não constem no arquivo:")
+        st.markdown("")
         
         template_email = """
-Assunto: Moavi | [<Cliente>] | Batidas de ponto
+    Assunto: Moavi | [<Cliente>] | Batidas de ponto
 
-Boa tarde!
-Tudo bem?
+    Boa tarde!
+    Tudo bem?
 
-Ao conferir o acompanhamento de batidas, identifiquei que algumas filiais ficaram sem registro de batidas.
+    Ao conferir o acompanhamento de batidas, identifiquei que algumas filiais ficaram sem registro de batidas.
  
-Vocês conseguem confirmar se houve algum problema operacional?
+    Vocês conseguem confirmar se houve algum problema operacional?
  
-Caso não tenha ocorrido problema, poderia, por gentileza, me enviar o retroativo das batidas?
+    Caso não tenha ocorrido problema, poderia, por gentileza, me enviar o retroativo das batidas?
 
-Atenciosamente,
+    Atenciosamente,
         """
-        
+
+        # Exibe o template como bloco de código para habilitar o botão 'copiar'
         st.code(template_email.strip(), language="text")
         
-        # Botão para copiar template
-        if st.button("📋 Copiar Template", key="copy_template"):
-            st.success("Template copiado! (Cole com Ctrl+V)")
+        
 
 
 def renderizar_documentacao_visual():
@@ -121,6 +104,10 @@ def renderizar_documentacao_visual():
                 renderizar_placeholder_imagem(label)
 
 
+def renderizar_inteligencia_arquivos():
+    # Função de listagem de arquivos removida — não é mais necessária
+    return
+
 def renderizar_placeholder_imagem(label):
     """
     Renderiza um placeholder quando a imagem não está disponível.
@@ -138,7 +125,7 @@ def renderizar_placeholder_imagem(label):
         color: #666;
         margin: 10px 0;
     ">
-        📷 {label}<br>
+         {label}<br>
         <small>Imagem não encontrada</small>
     </div>
     """, unsafe_allow_html=True)
@@ -246,7 +233,7 @@ def renderizar_regras_parser():
     # Campo para colagem (paste) da linha e botão de validação
     st.markdown("**Validar linha (cole o conteúdo AFD/AFDT aqui)**")
     linha_input = st.text_area("Cole a linha AFD/AFDT", value="", height=120, key="regras_paste")
-    validar = st.button("🔎 Validar linha", key="regras_validar")
+    validar = st.button(" Validar linha", key="regras_validar")
 
     if validar:
         if not linha_input or not linha_input.strip():

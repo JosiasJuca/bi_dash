@@ -12,7 +12,7 @@ def renderizar_gerenciamento():
         with open(DB_PATH, "rb") as _f:
             db_bytes = _f.read()
         st.download_button(
-            label="📥 Baixar banco de dados (integracoes.db)",
+            label=" Baixar banco de dados (integracoes.db)",
             data=db_bytes,
             file_name="integracoes.db",
             mime="application/x-sqlite3",
@@ -22,9 +22,9 @@ def renderizar_gerenciamento():
 
     # Sub-abas dentro do Gerenciamento
     tab_checklist, tab_chamados, tab_historico = st.tabs([
-        "📋 Checklist",
-        "🎫 Chamados Ativos", 
-        "📚 Histórico"
+        " Checklist",
+        " Chamados Ativos", 
+        " Histórico"
     ])
 
     with tab_checklist:
