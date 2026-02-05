@@ -7,7 +7,9 @@ import os
 from datetime import datetime
 from contextlib import contextmanager
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "integracoes.db")
+# Caminho para o banco no diretório raiz do projeto
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+DB_PATH = os.path.join(PROJECT_ROOT, "integracoes.db")
 
 @contextmanager
 def get_db():
@@ -439,4 +441,126 @@ def deletar_chamados_por_cliente(cliente_id):
             AND (data_resolucao IS NULL OR data_resolucao = '')
         """, (cliente_id,))
         return cursor.rowcount
+
+
+def listar_historico_completo(data_inicio=None, data_fim=None):
+    """Lista histórico completo com filtros de data"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        query = """
+            SELECT 
+                c.nome as cliente,
+                ch.id as chamado_id,
+                ch.status,
+                ch.categoria,
+                ch.observacao,
+                ch.resolucao,
+                ch.etapa,
+                ch.criado_em as data_criacao,
+                ch.atualizado_em as data_atualizacao,
+                ch.data_resolucao,
+                ch.status_original
+            FROM chamados ch
+            JOIN clientes c ON ch.cliente_id = c.id
+        """
+        
+        params = []
+        if data_inicio and data_fim:
+            query += " WHERE DATE(ch.criado_em) BETWEEN ? AND ?"
+            params = [data_inicio, data_fim]
+        elif data_inicio:
+            query += " WHERE DATE(ch.criado_em) >= ?"
+            params = [data_inicio]
+        elif data_fim:
+            query += " WHERE DATE(ch.criado_em) <= ?"
+            params = [data_fim]
+            
+        query += " ORDER BY ch.criado_em DESC"
+        
+        cursor.execute(query, params)
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def obter_estatisticas_periodo(data_inicio=None, data_fim=None):
+    """Obter estatísticas de um período específico"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        
+        base_where = ""
+        params = []
+        if data_inicio and data_fim:
+            base_where = " WHERE DATE(criado_em) BETWEEN ? AND ?"
+            params = [data_inicio, data_fim]
+        elif data_inicio:
+            base_where = " WHERE DATE(criado_em) >= ?"
+            params = [data_inicio]
+        elif data_fim:
+            base_where = " WHERE DATE(criado_em) <= ?"
+            params = [data_fim]
+        
+        # Total de registros
+        cursor.execute(f"SELECT COUNT(*) FROM chamados{base_where}", params)
+        total_registros = cursor.fetchone()[0]
+        
+        # Chamados com problemas (não resolvidos)
+        cursor.execute(f"""
+            SELECT COUNT(*) FROM chamados
+            {base_where}
+            {"AND" if base_where else "WHERE"} (status LIKE '%problema%' OR status LIKE '%refazendo%')
+            AND (data_resolucao IS NULL OR data_resolucao = '')
+        """, params)
+        chamados_problemas = cursor.fetchone()[0]
+        
+        # Resolvidos
+        cursor.execute(f"""
+            SELECT COUNT(*) FROM chamados
+            {base_where}
+            {"AND" if base_where else "WHERE"} data_resolucao IS NOT NULL AND data_resolucao != ''
+        """, params)
+        resolvidos = cursor.fetchone()[0]
+        
+        return {
+            'total_registros': total_registros,
+            'chamados_problemas': chamados_problemas,
+            'resolvidos': resolvidos
+        }
+
+
+def buscar_resolvidos_periodo(data_inicio=None, data_fim=None):
+    """Busca chamados resolvidos em um período"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        
+        query = """
+            SELECT 
+                c.nome as cliente,
+                ch.id as chamado_id,
+                ch.status,
+                ch.categoria,
+                ch.observacao,
+                ch.resolucao,
+                ch.etapa,
+                ch.criado_em as data_criacao,
+                ch.data_resolucao,
+                ch.status_original
+            FROM chamados ch
+            JOIN clientes c ON ch.cliente_id = c.id
+            WHERE ch.data_resolucao IS NOT NULL AND ch.data_resolucao != ''
+        """
+        
+        params = []
+        if data_inicio and data_fim:
+            query += " AND DATE(ch.data_resolucao) BETWEEN ? AND ?"
+            params = [data_inicio, data_fim]
+        elif data_inicio:
+            query += " AND DATE(ch.data_resolucao) >= ?"
+            params = [data_inicio]
+        elif data_fim:
+            query += " AND DATE(ch.data_resolucao) <= ?"
+            params = [data_fim]
+            
+        query += " ORDER BY ch.data_resolucao DESC"
+        
+        cursor.execute(query, params)
+        return [dict(row) for row in cursor.fetchall()]
 

@@ -1,387 +1,267 @@
-# 📊 BI de Integrações - v2.0
+# 📊 BI Dashboard - Sistema de Gestão de Integrações
 
-Sistema **simplificado e robusto** para gestão de integrações de clientes, usando SQLite ao invés de múltiplos CSVs.
+[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://python.org)
+[![Streamlit Version](https://img.shields.io/badge/streamlit-1.28%2B-red.svg)](https://streamlit.io)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Status](https://img.shields.io/badge/status-Produção-brightgreen.svg)]()
 
-## ✨ Novidades da v2.0
+## 🎯 Sobre o Projeto
 
-### 🎯 Vantagens sobre a versão anterior
+Sistema profissional de **Business Intelligence** para gestão completa de integrações e chamados técnicos. Desenvolvido com arquitetura modular moderna usando **Streamlit** e **SQLite**, oferece interface intuitiva para dashboards analíticos, controle de clientes e gerenciamento eficiente de chamados.
 
-| Antes (CSVs) | Agora (SQLite) |
-|--------------|----------------|
-| ❌ Múltiplos CSVs desincronizados | ✅ Banco de dados único e consistente |
-| ❌ Merges complexos e lentos | ✅ Consultas SQL rápidas e simples |
-| ❌ Fácil corromper dados | ✅ Transações atômicas (tudo ou nada) |
-| ❌ Difícil fazer backups | ✅ 1 arquivo = backup completo |
-| ❌ 600+ linhas de código | ✅ 400+ linhas limpas e organizadas |
-| ❌ Bugs de encoding e parsing | ✅ Tipos de dados garantidos pelo BD |
+**🚀 Versão 2.0** - Completamente reestruturada com arquitetura profissional e desenvolvimento colaborativo.
 
-### 🚀 Funcionalidades Principais
+### ✨ Principais Funcionalidades
 
-- ✅ **Dashboard Executivo** com KPIs e gráficos interativos
-- ✅ **Gestão Separada**: Checklist manual independente de chamados de problemas
-- ✅ **Chamados Ativos** com previsão de resolução e tracking completo
-- ✅ **Histórico Completo** de resoluções com possibilidade de reabertura
-- ✅ **Busca Inteligente** por clientes e filtros avançados
-- ✅ **Sistema de Categorias** para 7 tipos de integração
-- ✅ **Interface Responsiva** com layout organizado verticalmente
+- **📊 Dashboard Analítico**: Métricas em tempo real, gráficos interativos e KPIs empresariais
+- **✅ Checklist Inteligente**: Controle visual e automático do status de cada integração
+- **🎫 Gestão de Chamados**: Ciclo completo de abertura, acompanhamento e resolução com SLA
+- **📚 Histórico e Relatórios**: Rastreabilidade completa com exportação e análise temporal
+- **📖 Base de Conhecimento**: Passo a passo estruturado para resolução de problemas
+- **👥 Gerenciamento de Equipe**: Controle de acesso e distribuição de responsabilidades
+- **🔒 Autenticação Robusta**: Sistema seguro com controle granular de permissões
 
-### 📋 **Novos Recursos da Interface**
+## 🏗️ Arquitetura
 
-#### **Layout Reorganizado**
-- **Chamados**: Primeira tabela com data de abertura e previsão de resolução
-- **Checklist de Integração**: Segunda tabela com status manual por categoria
-- **Separação Total**: Problemas ativos não impactam o checklist manual
-
-#### **Gestão de Previsões**
-- **Previsão Automática**: 7 dias a partir da data de abertura
-- **Previsão Manual**: Definível no formulário de criação
-- **Tracking Visual**: Acompanhamento direto na tabela principal
-
-#### **Checklist Independente**
-- **Controle Manual**: Configuração por categoria (Batida, Escala, Feriados, etc.)
-- **Estados**: ✓ OK, ✗ Problema, 🛠️ Em Construção, N/A
-- **Preservação**: Estado atual mantido entre edições
-
----
-
-## 📦 Instalação e Execução
-
-### 1. Pré-requisitos
-
-```powershell
-# Instalar dependências
-pip install streamlit pandas plotly
+```
+bi_dash/
+├── src/                      # Código fonte modular
+│   ├── components/           # Componentes UI reutilizáveis
+│   │   ├── dashboard.py     # Dashboard principal e KPIs
+│   │   ├── charts.py        # Gráficos e visualizações
+│   │   ├── tables.py        # Tabelas e listagens
+│   │   ├── regras.py        # Base de conhecimento
+│   │   ├── chamados.py      # Gestão de chamados ativos
+│   │   ├── historico.py     # Histórico e relatórios
+│   │   ├── gerenciamento.py # Painel administrativo
+│   │   └── checklist.py     # Checklist de integrações
+│   ├── database/            # Camada de persistência
+│   │   ├── models.py        # Modelos e esquemas SQLite
+│   │   └── operations.py    # Operações CRUD e consultas
+│   └── utils/               # Utilitários compartilhados
+│       ├── constants.py     # Constantes e configurações
+│       ├── helpers.py       # Funções auxiliares
+│       └── auth.py          # Sistema de autenticação
+├── tests/                   # Suíte de testes automatizados
+├── docs/                    # Documentação técnica
+├── .github/                 # Automação GitHub
+│   ├── workflows/ci.yml     # Pipeline CI/CD
+│   ├── PULL_REQUEST_TEMPLATE.md
+│   └── ISSUE_TEMPLATE.md
+├── img/                     # Recursos visuais
+├── scripts/                 # Scripts de automação
+├── app.py                   # Ponto de entrada principal
+├── integracoes.db           # Banco SQLite
+├── requirements.txt         # Dependências Python
+├── .env.example             # Template de configuração
+├── .gitignore               # Exclusões Git
+└── README.md               # Documentação principal
 ```
 
-### 2. Execução
+## 🚀 Instalação e Configuração
 
-```powershell
-# Navegar até a pasta do projeto
-cd "caminho/para/bi_dash"
+### Pré-requisitos
+- Python 3.9 ou superior
+- Git
 
-# Executar o dashboard
-streamlit run bi_v2.py
+### 📦 Instalação Rápida
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/SEUUSERNAME/bi-dashboard.git
+cd bi-dashboard
+
+# 2. Criar ambiente virtual (recomendado)
+python -m venv venv
+
+# 3. Ativar ambiente virtual
+# Windows:
+venv\Scripts\activate
+# Linux/Mac:
+# source venv/bin/activate
+
+# 4. Instalar dependências
+pip install -r requirements.txt
+
+# 5. Configurar variáveis de ambiente
+copy .env.example .env
+# Edite o arquivo .env conforme necessário
+
+# 6. Executar aplicação
+streamlit run app.py
 ```
 
-### 3. Acesso
+### 🔧 Configuração Avançada
 
-- **URL Local**: http://localhost:8501
-- **Interface**: Navegador web (Chrome, Firefox, Edge)
+#### Variáveis de Ambiente (.env)
+```env
+# Senha para área administrativa
+DASH_SENHA=sua_senha_segura
 
----
+# Configurações do banco
+DATABASE_URL=sqlite:///integracoes.db
 
-## 🏗️ Estrutura do Projeto
+# Configurações de debug
+DEBUG=False
 
-### **Arquivos Principais**
-```
-bi_v2.py          # Interface principal (Streamlit)
-database.py       # Camada de dados (SQLite)
-integracoes.db    # Banco de dados
-requirements.txt  # Dependências Python
-README.md         # Este arquivo
-```
-
-### **Scripts Auxiliares**
-```
-scripts/
-  └── rename_statuses_simple.py  # Utilitário para renomear status
+# Configurações do Streamlit
+STREAMLIT_SERVER_PORT=8501
+STREAMLIT_SERVER_ADDRESS=localhost
 ```
 
----
+#### Configuração de Senha
 
-## 🎭 Guia de Uso
+O sistema oferece 3 formas de configurar a senha:
 
-### **1. Dashboard** 
-- **KPIs**: Visão geral dos números principais
-- **Gráficos**: Distribuição por status e categoria
-- **Tabelas**: Chamados ativos e checklist de integração
-- **Filtros**: Por status, cliente e responsável
+1. **Variável de Ambiente** (recomendado para produção):
+   ```bash
+   set DASH_SENHA=suasenhasecreta
+   ```
 
-### **2. Checklist** 
-- **Gerenciamento**: Configuração manual por cliente
-- **Estados**: Definição do status de cada categoria
-- **Responsáveis**: Atribuição (Guilherme, Eduardo, Marcelo)
-- **Administração**: Ferramentas de limpeza em lote
+2. **Interface Web** (para desenvolvimento):
+   - Use a sidebar para definir senha temporária
 
-### **3. Chamados Ativos**
-- **Criação**: Formulário completo com previsão
-- **Gestão**: Resolução e acompanhamento
-- **Status**: Apenas problemas ativos (status 1 e 2)
-- **Tracking**: Data de abertura e previsão visíveis
+3. **Fallback Padrão** (apenas para testes):
+   - Senha: `admin123`
 
-### **4. Histórico**
-- **Consulta**: Todos os chamados resolvidos
-- **Reabertura**: Possibilidade de reativar chamados
-- **Busca**: Filtro por cliente
+## 📱 Como Usar
 
----
+### 🏠 Dashboard Principal
+- **Métricas**: Total de clientes, chamados abertos/resolvidos, taxa de implantação
+- **Gráficos**: Distribuição por status, chamados por categoria
+- **Filtros**: Status, cliente, responsável
+- **Tabelas**: Chamados críticos e checklist de integração
 
-## 🔧 Status e Categorias
+### 🎫 Gerenciamento de Chamados
+1. **Criar Chamado**: Cliente + Status + Categoria + Observações
+2. **Acompanhar**: Etapas do ciclo de vida (Não iniciado → Resolvido)
+3. **Resolver**: Documentar solução e fechar chamado
+4. **Reabrir**: Se necessário, reativar chamado resolvido
 
-### **Status de Checklist (Manual)**
-- `3. Novo cliente sem integração`
-- `5. Implantado sem integração` 
-- `6. Integração Parcial`
-- `8. Integração em construção`
+### ✅ Checklist de Integração
+- **Status Visual**: ✓ (OK), ✗ (Problema), 🛠️ (Em Construção), N/A
+- **Categorias**: Batida, Escala, Feriados, Funcionários, PDV, Venda, SSO
+- **Gerenciamento**: Adicionar/editar clientes e status das integrações
 
-### **Status de Problemas (Chamados Ativos)**
-- `1. Implantado com problema`
-- `2. Implantado refazendo`
+### 📖 Base de Conhecimento
+- **Fluxo de Investigação**: Site → SFTP → Conformidade
+- **Formatos de Arquivo**: AFD, AFDT, Tipo Moavi
+- **Templates**: E-mails para notificação de problemas
+- **Documentação Visual**: Screenshots e exemplos
 
-### **Categorias de Integração**
-- **Batida**: Controle de ponto
-- **Escala**: Gerenciamento de horários
-- **Feriados**: Calendário corporativo
-- **Funcionários**: Cadastro de pessoal
-- **PDV**: Pontos de venda
-- **Venda**: Sistema comercial
-- **SSO**: Single Sign-On
+## 🛠️ Desenvolvimento
 
----
+### 🤝 Contribuindo
 
-## 💾 Backup e Manutenção
+1. **Fork** o projeto
+2. **Clone** seu fork: `git clone https://github.com/SEUUSERNAME/bi-dashboard.git`
+3. **Branch**: `git checkout -b feature/nova-funcionalidade`
+4. **Commit**: `git commit -m 'feat: adicionar nova funcionalidade'`
+5. **Push**: `git push origin feature/nova-funcionalidade`
+6. **Pull Request**: Abra um PR com descrição detalhada
 
-### **Backup Automático**
-- **Download**: Botão no rodapé para baixar integracoes.db
-- **Frequência**: Recomendado semanalmente
-- **Localização**: Arquivo único contém todos os dados
+### 📋 Padrões de Código
 
-### **Manutenção**
-- **Limpeza**: Ferramentas na aba Checklist para remoção em lote
-- **Scripts**: Pasta `scripts/` com utilitários diversos
-- **Logs**: Sistema auto-contido sem logs externos
+- **Nomenclatura**: `snake_case` para funções e variáveis
+- **Docstrings**: Documentar todas as funções públicas
+- **Imports**: Organizados em ordem (stdlib, third-party, local)
+- **Commits**: Seguir [Conventional Commits](https://conventionalcommits.org/)
 
----
+### 🧪 Testes
 
-## 🎯 Melhorias da v2.0
+```bash
+# Verificar sintaxe
+python -m py_compile app.py
 
-### **Separação Inteligente**
-- **Checklist Manual**: Não é afetado por chamados de problema
-- **Chamados Ativos**: Sistema independente para problemas técnicos
-- **Dados Limpos**: Cada área tem propósito específico
+# Executar aplicação localmente
+streamlit run app.py
 
-### **Interface Aprimorada**
-- **Layout Vertical**: Tabelas organizadas uma embaixo da outra
-- **Colunas Novas**: Data de abertura e previsão de resolução
-- **Performance**: Consultas otimizadas e interface responsiva
+# Verificar linting (opcional)
+flake8 . --max-line-length=127
+```
 
-### **Funcionalidades Avançadas**
-- **Previsão Inteligente**: Cálculo automático ou manual
-- **Estado Preservado**: Configurações mantidas entre sessões
-- **Filtros Avançados**: Múltiplas dimensões de busca
+### 🚢 Deploy
 
----
+#### Deploy no Streamlit Cloud
+1. Conecte seu repositório GitHub
+2. Configure as variáveis de ambiente
+3. Deploy automático a cada push na main
+
+#### Deploy no Heroku
+```bash
+# Adicionar arquivos de configuração
+echo "streamlit run app.py --server.port=\$PORT --server.address=0.0.0.0" > Procfile
+echo "python-3.9.16" > runtime.txt
+
+# Deploy
+git add .
+git commit -m "feat: preparar para deploy"
+git push heroku main
+```
+
+## 📊 Métricas e Analytics
+
+### KPIs Principais
+- **Taxa de Implantação**: % de clientes com integração completa
+- **Tempo Médio de Resolução**: Eficiência na resolução de chamados
+- **Distribuição por Status**: Visão geral da saúde das integrações
+- **Chamados por Responsável**: Balanceamento de carga de trabalho
+
+### Relatórios Disponíveis
+- Chamados por período
+- Clientes sem integração
+- Histórico de resoluções
+- Performance por categoria
+
+## 🔒 Segurança
+
+- **Autenticação**: Controle de acesso à área administrativa
+- **Validação**: Sanitização de entradas do usuário
+- **Auditoria**: Log de todas as ações importantes
+- **Backup**: Funcionalidade de download do banco de dados
 
 ## 📞 Suporte
 
-Para dúvidas ou problemas:
-1. Verificar este README.md
-2. Consultar documentação técnica em `/docs`
-3. Contatar a equipe de desenvolvimento
+### 🐛 Problemas e Bugs
+- Abra uma [Issue](../../issues/new) descrevendo o problema
+- Use o template de bug report
+- Inclua prints quando possível
 
-**Versão**: 2.0  
-**Data**: Fevereiro 2026  
-**Desenvolvido por**: Moavi © 2026
-- ✅ Criar o banco de dados SQLite
-- ✅ Importar todos os clientes de `todos_clientes.csv`
-- ✅ Importar todos os chamados de `integracoes.csv`
-- ✅ Criar os checklists automaticamente
-- ✅ Preservar datas de abertura e resolução
+### 💡 Sugestões e Melhorias
+- Abra uma [Feature Request](../../issues/new)
+- Descreva o problema que a feature resolve
+- Inclua mockups se tiver
 
-**IMPORTANTE:** Os arquivos antigos **não serão modificados**. O sistema v2 é totalmente independente.
+### 📖 Documentação
+- [Guia de Contribuição](docs/CONTRIBUTING.md)
+- [Documentação da API](docs/API.md)
+- [Guia de Deploy](docs/DEPLOYMENT.md)
 
----
+## 🏆 Equipe
 
-## 🚀 Como Usar
+### 👨‍💻 Desenvolvedores
+- **[Seu Nome]** - Desenvolvedor Principal
+- **[Nome do Colega]** - Desenvolvedor
 
-### Executar o Dashboard
+### 🙏 Agradecimentos
+- Comunidade Streamlit
+- Equipe de Integrações
+- Colaboradores do projeto
 
-```powershell
-cd "Bi_integracao_v2"
-streamlit run bi_v2.py
-```
+## 📄 Licença
 
-O sistema abrirá automaticamente em `http://localhost:8501`
+Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
 
-### Interface
+## 🔗 Links Úteis
 
-#### 📈 **Aba Dashboard**
-- Visualize KPIs: Total de clientes, chamados abertos/resolvidos, taxa de implantação
-- Gráficos de distribuição por status e categoria
-- Visão geral do sistema
-
-#### 🎫 **Aba Chamados Ativos**
-- Crie novos chamados
-- Adicione clientes novos ou selecione existentes
-- Resolva chamados com um clique
-- Filtre por status e busque por nome
-
-#### ✅ **Aba Histórico**
-- Veja todos os chamados resolvidos
-- Reabra chamados se necessário
-- Busque por cliente ou categoria
-
-#### 👥 **Aba Gerenciar Clientes**
-- Adicione novos clientes
-- Visualize lista completa
-- Busque por nome
+- [Documentação Streamlit](https://docs.streamlit.io)
+- [Pandas Documentation](https://pandas.pydata.org/docs/)
+- [Plotly Python](https://plotly.com/python/)
+- [SQLite Documentation](https://www.sqlite.org/docs.html)
 
 ---
 
-## 🗄️ Estrutura do Banco de Dados
-
-### Tabelas
-
-#### `clientes`
-```sql
-id, nome, ativo, criado_em
-```
-
-#### `chamados`
-```sql
-id, cliente_id, status, categoria, observacao, 
-data_abertura, data_resolucao, criado_em, atualizado_em
-```
-
-#### `checklist`
-```sql
-id, cliente_id, batida, escala, feriados, 
-funcionarios, pdv, venda, sso, atualizado_em
-```
-
----
-
-## 📊 Status Disponíveis
-
-| Status | Descrição |
-|--------|-----------|
-| 1. Implantado com problema | Cliente integrado mas com erros técnicos |
-| 2. Implantado refazendo | Reprocessando a integração |
-| 3. Novo cliente sem integração | Cliente novo aguardando setup inicial |
-| 5. Implantado sem integração | Cliente ativo mas sem integrações |
-| 7. Status Normal | ✅ Tudo funcionando corretamente |
-
----
-
-## 📂 Categorias
-
-- **Batida** - Sistema de registro de ponto
-- **Escala** - Gestão de escalas de trabalho
-- **Feriados** - Calendário de feriados
-- **Funcionários** - Cadastro de colaboradores
-- **PDV** - Integração de pontos de venda
-- **Venda** - Dados e relatórios de vendas
-- **SSO** - Single Sign-On
-- **Geral** - Outros assuntos
-
----
-
-## 💾 Backup e Manutenção
-
-### Fazer Backup
-
-```powershell
-# Copie o arquivo do banco de dados
-copy integracoes.db integracoes_backup_$(Get-Date -Format "yyyyMMdd").db
-```
-
-### Restaurar Backup
-
-```powershell
-# Substitua o banco atual pelo backup
-copy integracoes_backup_20260123.db integracoes.db
-```
-
-### Ver Estrutura do Banco (Opcional)
-
-```powershell
-# Instale o SQLite (opcional)
-# Download: https://www.sqlite.org/download.html
-
-# Ou use Python
-python -c "import sqlite3; conn=sqlite3.connect('integracoes.db'); print(conn.execute('SELECT * FROM clientes').fetchall())"
-```
-
----
-
-## 🔧 Arquivos do Projeto
-
-```
-Bi_integracao_v2/
-├── bi_v2.py              # Dashboard principal (Streamlit)
-├── database.py           # Funções de banco de dados
-├── migrar_dados.py       # Script de migração (rodar 1x)
-├── integracoes.db        # Banco de dados (criado automaticamente)
-└── README.md             # Este arquivo
-```
-
----
-
-## 🐛 Troubleshooting
-
-### Problema: "Erro ao conectar no banco"
-**Solução:** Execute primeiro `python migrar_dados.py`
-
-### Problema: "Cliente já existe"
-**Solução:** Normal. O sistema ignora duplicatas automaticamente.
-
-### Problema: "Nenhum dado aparece no dashboard"
-**Solução:** Verifique se a migração foi executada. Adicione dados manualmente pela aba "Gerenciar".
-
-### Problema: "Gráficos não aparecem"
-**Solução:** Atualize a página (F5). Se persistir, reinstale plotly: `pip install --upgrade plotly`
-
----
-
-## 🆚 Comparação com Versão Antiga
-
-### Código
-
-**Antes:**
-```python
-# 606 linhas de código complexo
-# Múltiplos merges, pivots, fillna
-df_merge = pd.merge(df_todos_base, df_final_int, on="Cliente", how="outer")
-df_pivot = df_int.pivot_table(index='Cliente', columns='Categoria', aggfunc='size', fill_value=0)
-# ... mais 50 linhas de transformações
-```
-
-**Agora:**
-```python
-# 300 linhas limpas e diretas
-chamados = listar_chamados_abertos()  # Pronto!
-stats = obter_estatisticas()  # Tudo calculado
-```
-
-### Performance
-
-- **Antes:** ~2-3 segundos para carregar (parsing de múltiplos CSVs)
-- **Agora:** ~0.1 segundo (query SQL otimizada)
-
-### Confiabilidade
-
-- **Antes:** Fácil corromper dados editando CSV no Excel
-- **Agora:** Dados protegidos por constraints do banco
-
----
-
-## 📚 Para Desenvolvedores
-
-### Adicionar Nova Funcionalidade
-
-1. Adicione função em `database.py`
-2. Use a função em `bi_v2.py`
-3. Teste localmente
-
-### Exemplo: Adicionar campo novo
-
-```python
-# 1. Em database.py, adicione migração
-with get_db() as conn:
-    conn.execute("ALTER TABLE chamados ADD COLUMN prioridade TEXT")
-
-# 2. Em bi_v2.py, use o campo
-prioridade = st.selectbox("Prioridade", ["Baixa", "Média", "Alta"])
-```
-
----
+<p align="center">
+  Desenvolvido com ❤️ pela Equipe de Integrações<br>
+  <strong>BI Dashboard v2.0</strong> - Sistema Profissional de Gestão
+</p>
