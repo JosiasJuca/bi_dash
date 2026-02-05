@@ -4,6 +4,9 @@ Componente da aba Regras e Passo a Passo.
 import streamlit as st
 import pandas as pd
 import os
+import re
+from datetime import datetime
+from typing import Optional, Dict
 
 
 def renderizar_regras():
@@ -160,3 +163,133 @@ def renderizar_placeholder_imagem(label):
         <small>Imagem não encontrada</small>
     </div>
     """, unsafe_allow_html=True)
+
+
+# -------------------------
+# Seção: Regras — Parser AFD / AFDT-REP
+# -------------------------
+
+def parse_afd_compacto(linha: str) -> Optional[Dict]:
+    """Parseia formato compacto AFD (ex.: NSR + tipo + DDMMYYYY + HHMM + PIS)."""
+    linha = linha.strip()
+    if len(linha) < 34:
+        return None
+    nsr = linha[0:9]
+    tipo = linha[9]
+    data = linha[10:18]
+    hora = linha[18:22]
+    pis = linha[22:34]
+    # formata data/hora
+    if len(data) == 8:
+        # ex: YYYYMMDD ou DDMMYYYY — tentar detectar
+        if data.startswith('20') or data.startswith('19'):
+            # YYYYMMDD → DD/MM/YYYY
+            data_format = f"{data[6:8]}/{data[4:6]}/{data[0:4]}"
+        else:
+            # DDMMYYYY → DD/MM/YYYY
+            data_format = f"{data[0:2]}/{data[2:4]}/{data[4:]}"
+    else:
+        data_format = data
+    hora_format = f"{hora[:2]}:{hora[2:]}" if len(hora) >= 4 else hora
+    return {"nsr": nsr, "tipo": tipo, "data": data_format, "hora": hora_format, "pis": pis}
+
+
+def parse_afdt_iso(linha: str) -> Optional[Dict]:
+    """Tenta parsear registros que contenham timestamps ISO (AFDT / REP).
+    Usa regex para localizar o primeiro timestamp no formato YYYY-MM-DDTHH:MM:SS.
+    """
+    linha = linha.strip()
+    # procurar padrão ISO
+    m = re.search(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", linha)
+    if not m:
+        return None
+    try:
+        nsr = linha[0:9] if len(linha) >= 9 else ""
+        tipo = linha[9] if len(linha) > 9 else ""
+        ts = m.group(0)
+        dt = datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S")
+        data_format = dt.strftime("%d/%m/%Y")
+        hora_format = dt.strftime("%H:%M:%S")
+        # buscar PIS logo após o timestamp (heurística)
+        post = linha[m.end():]
+        pis_m = re.search(r"\d{10,12}", post)
+        pis = pis_m.group(0) if pis_m else ""
+        return {"nsr": nsr, "tipo": tipo, "data": data_format, "hora": hora_format, "pis": pis}
+    except Exception:
+        return None
+
+
+def parse_registro(linha: str) -> Dict:
+    """Tenta identificar e parsear um registro AFD/AFDT.
+    Retorna dicionário com formato detectado e campos.
+    """
+    linha = linha.strip()
+    # Priorizar formato ISO/AFDT
+    res = parse_afdt_iso(linha)
+    if res:
+        return {"formato": "AFDT/ISO", **res}
+    res = parse_afd_compacto(linha)
+    if res:
+        return {"formato": "AFD-compacto", **res}
+    return {"formato": "desconhecido", "raw": linha}
+
+
+def renderizar_regras_parser():
+    """Renderiza explicação e exemplos de parser para suporte."""
+    st.markdown("### Como ler registros AFD / AFDT-REP")
+    st.markdown(
+        """
+        - **NSR**: Identificador sequencial do registro (normalmente 9 dígitos).
+        - **Tipo de Registro**: Código de 1 dígito que representa o tipo da linha.
+        - **Data / Hora**: Pode vir em formato compacto (DDMMYYYY + HHMM) ou ISO (`YYYY-MM-DDTHH:MM:SS`).
+        - **PIS**: Identificador do colaborador (10-12 dígitos, pode ter zeros à esquerda).
+        
+        O parser implementa heurísticas para detectar o formato e extrair campos. Se o layout oficial do REP/AFD estiver disponível, prefira usar o fatiamento exato baseado no layout.
+        """,
+    )
+
+    # Mostrar código de exemplo
+    codigo_exemplo = '''def parse_registro(linha: str) -> Dict:
+    # detecta formato AFDT/ISO ou AFD compacto e retorna campos essenciais
+    ...
+'''
+    st.code(codigo_exemplo, language="python")
+
+    # Exemplos
+    st.markdown("**Exemplo AFD compacto**")
+    ex1 = "00033785732901202610360203640807955528"
+    st.code(ex1, language="text")
+    st.write(parse_registro(ex1))
+
+    st.markdown("**Exemplo AFDT/REP (ISO)**")
+    ex2 = "00003575872026-01-13T22:01:00-03000014529820582026-01-13T22:02:00-03000104f518c5ccdb62808a776c244439c46eae39cd1681c7b8cb8ab60940e7350f1fd"
+    st.code(ex2[:180] + '...')
+    st.write(parse_registro(ex2))
+
+
+# Integração na página
+def renderizar_regras():
+    """Renderiza a aba de regras e passo a passo."""
+    st.title(" Passo a passo integrações")
+    st.markdown("""
+    Este painel consolida o **Passo a passo integrações**. Siga os passos para uma melhor análise de divergências.
+    """)
+
+    # ==================== FLUXO PRINCIPAL ====================
+    renderizar_fluxo_investigacao()
+    st.markdown("---")
+
+    # ==================== TABELA DE ARQUIVOS ====================
+    renderizar_inteligencia_arquivos()
+    st.markdown("---")
+
+    # ==================== CHECKLIST E E-MAIL ====================
+    renderizar_checklist_e_email()
+    st.markdown("---")
+
+    # ==================== PARSER AFD / AFDT ====================
+    renderizar_regras_parser()
+    st.markdown("---")
+
+    # ==================== DOCUMENTAÇÃO VISUAL ====================
+    renderizar_documentacao_visual()
