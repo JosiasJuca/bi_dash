@@ -55,7 +55,8 @@ Thumbs.db
 *.bak
 
 # Streamlit
-.streamlit/
+.streamlit/secrets.toml
+.streamlit/config.toml
 
 # Arquivos temporários
 *.temp
