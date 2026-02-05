@@ -9,28 +9,7 @@ from datetime import datetime
 from typing import Optional, Dict
 
 
-def renderizar_regras():
-    """Renderiza a aba de regras e passo a passo."""
-    
-    st.title(" Passo a passo integrações")
-    
-    st.markdown("""
-    Este painel consolida o **Passo a passo integrações**. Siga os passos para uma melhor análise de divergências.""")
 
-    # ==================== FLUXO PRINCIPAL ====================
-    renderizar_fluxo_investigacao()
-    
-    st.markdown("---")
-
-    # ==================== TABELA DE ARQUIVOS ====================
-    renderizar_inteligencia_arquivos()
-
-    # ==================== CHECKLIST E E-MAIL ====================
-    renderizar_checklist_e_email()
-
-    # ==================== DOCUMENTAÇÃO VISUAL ====================
-    st.markdown("---")
-    renderizar_documentacao_visual()
 
 
 def renderizar_fluxo_investigacao():
@@ -94,18 +73,18 @@ def renderizar_modelo_email():
         st.markdown("Copie o texto abaixo caso as batidas não constem no arquivo:")
         
         template_email = """
-Assunto: Inconsistência no envio de batidas - [Cliente]
+Assunto: Moavi | [<Cliente>] | Batidas de ponto
 
-Prezado responsável,
+Boa tarde!
+Tudo bem?
 
-Identificamos que nos últimos [N] dias, os arquivos 
-enviados via integração não contém as marcações 
-de ponto dos colaboradores.
-
-Poderia verificar o envio na origem?
+Ao conferir o acompanhamento de batidas, identifiquei que algumas filiais ficaram sem registro de batidas.
+ 
+Vocês conseguem confirmar se houve algum problema operacional?
+ 
+Caso não tenha ocorrido problema, poderia, por gentileza, me enviar o retroativo das batidas?
 
 Atenciosamente,
-Equipe de Integrações
         """
         
         st.code(template_email.strip(), language="text")
@@ -199,22 +178,21 @@ def parse_afdt_iso(linha: str) -> Optional[Dict]:
     Usa regex para localizar o primeiro timestamp no formato YYYY-MM-DDTHH:MM:SS.
     """
     linha = linha.strip()
-    # procurar padrão ISO
+    # procurar padrão ISO (presença indica AFDT/REP) — em seguida usamos fatiamento fixo do primeiro registro
     m = re.search(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", linha)
     if not m:
         return None
+
+    nsr = linha[0:9] if len(linha) >= 9 else ""
+    tipo = linha[9] if len(linha) > 9 else ""
     try:
-        nsr = linha[0:9] if len(linha) >= 9 else ""
-        tipo = linha[9] if len(linha) > 9 else ""
-        ts = m.group(0)
-        dt = datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S")
-        data_format = dt.strftime("%d/%m/%Y")
-        hora_format = dt.strftime("%H:%M:%S")
-        # buscar PIS logo após o timestamp (heurística)
-        post = linha[m.end():]
-        pis_m = re.search(r"\d{10,12}", post)
-        pis = pis_m.group(0) if pis_m else ""
-        return {"nsr": nsr, "tipo": tipo, "data": data_format, "hora": hora_format, "pis": pis}
+        # fatiamento conforme layout fornecido
+        data_raw = linha[10:20]  # AAAA-MM-DD
+        hora_raw = linha[21:26]  # HH:MM
+        pis = linha[35:46] if len(linha) >= 46 else ""
+        data_formatada = data_raw.replace('-', '/')
+        hora_formatada = hora_raw
+        return {"nsr": nsr, "tipo": tipo, "data": data_formatada, "hora": hora_formatada, "pis": pis}
     except Exception:
         return None
 
@@ -243,17 +221,15 @@ def renderizar_regras_parser():
         - **Tipo de Registro**: Código de 1 dígito que representa o tipo da linha.
         - **Data / Hora**: Pode vir em formato compacto (DDMMYYYY + HHMM) ou ISO (`YYYY-MM-DDTHH:MM:SS`).
         - **PIS**: Identificador do colaborador (10-12 dígitos, pode ter zeros à esquerda).
-        
-        O parser implementa heurísticas para detectar o formato e extrair campos. Se o layout oficial do REP/AFD estiver disponível, prefira usar o fatiamento exato baseado no layout.
+
+        Para registros AFDT/REP este painel utiliza o fatiamento do primeiro registro com o layout padrão (quando presente):
+        - `nsr = linha[0:9]`
+        - `tipo = linha[9]`
+        - `data_raw = linha[10:20]`  # AAAA-MM-DD
+        - `hora_raw = linha[21:26]`  # HH:MM
+        - `pis = linha[35:46]`
         """,
     )
-
-    # Mostrar código de exemplo
-    codigo_exemplo = '''def parse_registro(linha: str) -> Dict:
-    # detecta formato AFDT/ISO ou AFD compacto e retorna campos essenciais
-    ...
-'''
-    st.code(codigo_exemplo, language="python")
 
     # Exemplos
     st.markdown("**Exemplo AFD compacto**")
@@ -264,7 +240,21 @@ def renderizar_regras_parser():
     st.markdown("**Exemplo AFDT/REP (ISO)**")
     ex2 = "00003575872026-01-13T22:01:00-03000014529820582026-01-13T22:02:00-03000104f518c5ccdb62808a776c244439c46eae39cd1681c7b8cb8ab60940e7350f1fd"
     st.code(ex2[:180] + '...')
+    # Mostrar parse do exemplo AFDT/REP (primeiro registro)
     st.write(parse_registro(ex2))
+
+    # Campo para colagem (paste) da linha e botão de validação
+    st.markdown("**Validar linha (cole o conteúdo AFD/AFDT aqui)**")
+    linha_input = st.text_area("Cole a linha AFD/AFDT", value="", height=120, key="regras_paste")
+    validar = st.button("🔎 Validar linha", key="regras_validar")
+
+    if validar:
+        if not linha_input or not linha_input.strip():
+            st.warning("Cole uma linha válida para análise.")
+        else:
+            # Sempre mostrar apenas o primeiro registro detectado (fatiamento AFDT/REP ou AFD compacto)
+            st.subheader("Resultado (primeiro registro detectado)")
+            st.json(parse_registro(linha_input))
 
 
 # Integração na página
