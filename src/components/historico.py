@@ -37,9 +37,7 @@ def renderizar_historico():
         st.error("⚠️ Data inicial não pode ser maior que a data final!")
         return
     
-    # Exibir estatísticas do período
-    renderizar_estatisticas_periodo(data_inicio, data_fim)
-    
+    # (Estatísticas resumidas removidas por solicitação)
     st.divider()
     
     # Tabs para diferentes visualizações — removida a aba 'Histórico'
