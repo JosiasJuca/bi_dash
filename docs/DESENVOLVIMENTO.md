@@ -9,9 +9,8 @@
 
 ### Configuração do Ambiente
 ```bash
-# 1. Clone o repositório
-git clone https://github.com/SeuUsuario/bi-dashboard.git
-cd bi-dashboard
+# 1. Navegar para o diretório do projeto
+cd bi_dash
 
 # 2. Criar ambiente virtual
 python -m venv venv
@@ -25,11 +24,7 @@ source venv/bin/activate
 # 4. Instalar dependências
 pip install -r requirements.txt
 
-# 5. Configurar variáveis
-copy .env.example .env
-# Editar .env conforme necessário
-
-# 6. Executar aplicação
+# 5. Executar aplicação
 streamlit run app.py
 ```
 

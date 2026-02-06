@@ -25,8 +25,10 @@ Sistema profissional de **Business Intelligence** para gestão completa de integ
 
 ```
 bi_dash/
-├── src/                      # Código fonte modular
-│   ├── components/           # Componentes UI reutilizáveis
+├── app.py                   # Aplicação principal Streamlit
+├── requirements.txt         # Dependências do projeto
+├── src/                     # Código fonte modular
+│   ├── components/          # Componentes UI reutilizáveis
 │   │   ├── dashboard.py     # Dashboard principal e KPIs
 │   │   ├── charts.py        # Gráficos e visualizações
 │   │   ├── tables.py        # Tabelas e listagens
@@ -44,18 +46,8 @@ bi_dash/
 │       └── auth.py          # Sistema de autenticação
 ├── tests/                   # Suíte de testes automatizados
 ├── docs/                    # Documentação técnica
-├── .github/                 # Automação GitHub
-│   ├── workflows/ci.yml     # Pipeline CI/CD
-│   ├── PULL_REQUEST_TEMPLATE.md
-│   └── ISSUE_TEMPLATE.md
-├── img/                     # Recursos visuais
-├── scripts/                 # Scripts de automação
-├── app.py                   # Ponto de entrada principal
-├── integracoes.db           # Banco SQLite
-├── requirements.txt         # Dependências Python
-├── .env.example             # Template de configuração
-├── .gitignore               # Exclusões Git
-└── README.md               # Documentação principal
+├── img/                     # Imagens e recursos visuais
+└── scripts/                 # Scripts úteis
 ```
 
 ## 🚀 Instalação e Configuração
@@ -64,12 +56,11 @@ bi_dash/
 - Python 3.9 ou superior
 - Git
 
-### 📦 Instalação Rápida
+### 📦 Instalação Local
 
 ```bash
-# 1. Clone o repositório
-git clone https://github.com/SEUUSERNAME/bi-dashboard.git
-cd bi-dashboard
+# 1. Navegar para o diretório do projeto
+cd bi_dash
 
 # 2. Criar ambiente virtual (recomendado)
 python -m venv venv
@@ -78,48 +69,26 @@ python -m venv venv
 # Windows:
 venv\Scripts\activate
 # Linux/Mac:
-# source venv/bin/activate
+source venv/bin/activate
 
 # 4. Instalar dependências
 pip install -r requirements.txt
 
-# 5. Configurar variáveis de ambiente
-copy .env.example .env
-# Edite o arquivo .env conforme necessário
-
-# 6. Executar aplicação
+# 5. Executar aplicação
 streamlit run app.py
 ```
 
-### 🔧 Configuração Avançada
+### 🔧 Configuração de Senha
 
-#### Variáveis de Ambiente (.env)
-```env
-# Senha para área administrativa
-DASH_SENHA=sua_senha_segura
+O sistema oferece formas de configurar a senha administrativa:
 
-# Configurações do banco
-DATABASE_URL=sqlite:///integracoes.db
+1. **Interface Web** (recomendado para desenvolvimento):
+   - Use a sidebar para definir senha temporária
 
-# Configurações de debug
-DEBUG=False
-
-# Configurações do Streamlit
-STREAMLIT_SERVER_PORT=8501
-STREAMLIT_SERVER_ADDRESS=localhost
-```
-
-#### Configuração de Senha
-
-O sistema oferece 3 formas de configurar a senha:
-
-1. **Variável de Ambiente** (recomendado para produção):
+2. **Variável de Ambiente** (para produção):
    ```bash
    set DASH_SENHA=suasenhasecreta
    ```
-
-2. **Interface Web** (para desenvolvimento):
-   - Use a sidebar para definir senha temporária
 
 3. **Fallback Padrão** (apenas para testes):
    - Senha: `admin123`

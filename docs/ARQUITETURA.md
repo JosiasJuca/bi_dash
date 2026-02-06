@@ -245,19 +245,17 @@ except Exception as e:
 
 ## 🔧 Configuração e Deploy
 
-### Variáveis de Ambiente
-```env
-DASH_SENHA=senha_administrativa
-DEBUG=False
-STREAMLIT_SERVER_PORT=8502
-```
+### Sistema de Autenticação
+O sistema usa múltiplas formas de configuração de senha:
+- Interface sidebar para desenvolvimento
+- Variável de ambiente `DASH_SENHA` para produção
+- Fallback padrão para testes
 
 ### Dependências Principais
 - **streamlit**: Framework web
-- **sqlite3**: Banco de dados
-- **plotly**: Visualizações
+- **sqlite3**: Banco de dados (built-in Python)
+- **plotly**: Visualizações interativas
 - **pandas**: Manipulação de dados
-- **python-dotenv**: Variáveis de ambiente
 
 ---
 

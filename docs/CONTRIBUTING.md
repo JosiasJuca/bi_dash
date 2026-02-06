@@ -35,10 +35,6 @@ venv\Scripts\activate
 # Instalar dependências
 pip install -r requirements.txt
 
-# Configurar variáveis de ambiente
-copy .env.example .env
-# Edite o .env conforme necessário
-
 # Verificar se tudo funciona
 streamlit run app.py
 ```
