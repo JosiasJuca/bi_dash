@@ -244,9 +244,8 @@ def renderizar_regras_parser():
             st.json(parse_registro(linha_input))
 
 
-# Integração na página
-def renderizar_regras():
-    """Renderiza a aba de regras e passo a passo."""
+def renderizar_conteudo_batidas():
+    """Renderiza o conteúdo principal da aba Batidas."""
     st.title(" Passo a passo integrações")
     st.markdown("""
     Este painel consolida o **Passo a passo integrações**. Siga os passos para uma melhor análise de divergências.
@@ -270,3 +269,174 @@ def renderizar_regras():
 
     # ==================== DOCUMENTAÇÃO VISUAL ====================
     renderizar_documentacao_visual()
+
+
+def renderizar_regras():
+    """Renderiza a aba de regras e passo a passo com subtabs."""
+    st.title(" Regras e Fluxo")
+    st.markdown("Visualize o fluxo ou escolha uma aba para ver conteúdos específicos.")
+
+    tab_fluxo, tab_batidas, tab_colaboradores, tab_vendas = st.tabs([
+        "Fluxo",
+        "Batidas",
+        "Colaboradores",
+        "Vendas",
+    ])
+
+    with tab_fluxo:
+        img_dir = os.path.join(os.path.dirname(__file__), "..", "..", "img")
+        fluxo_path = os.path.join(img_dir, "fluxo.png")
+        if os.path.exists(fluxo_path):
+            st.image(fluxo_path, caption="Fluxo de investigação", use_container_width=True)
+        else:
+            renderizar_placeholder_imagem("Fluxo de investigação")
+
+    with tab_batidas:
+        renderizar_conteudo_batidas()
+
+    with tab_colaboradores:
+        st.markdown("""
+# Fluxo de Atendimento: Colaboradores
+
+Este guia orienta o processo de investigação e resolução de problemas relacionados aos dados de colaboradores e batidas de ponto na plataforma.
+
+## 1. Integrações Essenciais (Dados de Novos Colaboradores)
+
+Antes de iniciar a análise de erros, entenda como os dados são recebidos:
+
+* **Formato:** Os arquivos são recebidos exclusivamente em formato **CSV**.
+* **Localização:** Os arquivos são depositados em nossa pasta de **"Importados"**.
+* **Identificação (Campos Chave):** A integração pode utilizar o **PIS**, **CPF** ou **Matrícula** como identificador principal.
+* **Método de Análise:** 1. Baixar o arquivo da pasta de importados.
+2. Abrir e separar os dados por **delimitador** (ex: vírgula ou ponto e vírgula).
+3. Buscar as informações do colaborador para validar o envio.
+
+---
+
+## 2. Fluxo de Investigação de Divergências
+
+Siga os passos abaixo quando houver ausência de marcações ou erro de cadastro.
+
+### **Cenário: Batida do colaborador não aparece**
+
+1. **Baixar arquivo de colaboradores:** Analise o CSV na pasta de importados.
+2. **Avaliar cadastro na Moavi:** Verifique se o registro foi processado corretamente.
+
+| Cenário | Causa Identificada | Ação Necessária |
+| --- | --- | --- |
+| **Não encontra o colaborador** | Não está cadastrada | Ensinar o usuário a adicionar na escala. |
+| **Colaborador cadastrado** | Colocou colaborador errado | Explicar que a escala está com a pessoa errada. |
+| **Dados divergentes** | Dado diferente do real | Seguir para análise de PIS/Integração. |
+
+---
+
+## 3. Diagnóstico de Integração (PIS e Dados)
+
+> [!IMPORTANT]
+> **Ação Padrão:** Para qualquer erro de PIS ou ausência de dados na integração, o contato deve ser feito com o **RH** do cliente.
+
+* **PIS Diferente:** O PIS no sistema de integração não coincide com o informado pela pessoa.
+* *Ação:* Pedir ao usuário para solicitar a atualização do PIS no RH (sistema de ponto).
+
+* **PIS Zerado:** O campo de PIS está vindo vazio ou zerado no CSV.
+* *Ação:* Solicitar ao RH a correção do cadastro no sistema de origem.
+
+* **Sem PIS / Dados Ausentes:** Não estamos recebendo os dados da pessoa no arquivo.
+* *Ação:* Solicitar ao RH que inclua/envie o colaborador na próxima integração.
+
+---
+
+## 4. Dúvidas Frequentes (FAQ)
+
+**Podemos corrigir uma integração manualmente?**
+
+* **Não.** Nunca alteramos dados vindos de integração para evitar desalinhamento entre os sistemas.
+
+**Podemos corrigir dados do colaborador diretamente?**
+
+* **Somente** em casos onde **não existe** integração ativa. Se houver integração, a origem deve ser corrigida.
+
+**Para quem devo encaminhar casos críticos?**
+
+* Siga o fluxo da coluna **"Contato"** na página de **Integrações**. Caso não haja, acione: **Ju, Madruga ou Edu**.
+
+---
+
+""")
+
+    with tab_vendas:
+        st.markdown("""
+# Fluxo de Atendimento: Vendas
+
+Este guia orienta a validação e análise técnica dos dados de vendas integrados na plataforma.
+
+## 1. Integrações Essenciais (Vendas)
+
+Para que a análise de performance seja precisa, os dados de vendas devem seguir estes critérios obrigatórios:
+
+* **Granularidade:** A curva de vendas precisa ser enviada **hora a hora** e **dia a dia**.
+* **Métricas Necessárias:**
+* Faturamento (**R$**);
+* Quantidade de **cupons** emitidos;
+* Quantidade de **itens** vendidos.
+
+
+* **Histórico Inicial:** Sempre garantir o envio do **último mês completo** para base de comparação.
+
+---
+
+## 2. Quebra por Setores (Departamentalização)
+
+Os dados devem ser segmentados conforme o ramo do cliente. **Atenção à regra do Setor Total.**
+
+### **Segmentos Comuns**
+
+* **Farmácia:** Total, Balcão e Dermocosméticos.
+* **Supermercado:** Total, Padaria, FLV (Frutas, Legumes e Verduras), Frios, Açougue, Adega, etc.
+
+> [!CAUTION]
+> **REGRA DE OURO:** O cliente deve enviar o setor **TOTAL** separadamente no arquivo.
+> **Nunca somar a quantidade de cupons dos setores** para tentar chegar ao total, pois um único cupom pode conter itens de vários setores diferentes (gerando duplicidade na contagem).
+
+---
+
+## 3. Análise Visual do Arquivo
+
+Utilize o espaço abaixo para anexar ou visualizar o layout padrão do arquivo de vendas que o sistema processa.
+
+### **Exemplo de um Arquivo de Vendas**
+""")
+
+        # Exibe imagem de vendas se disponível
+        img_dir = os.path.join(os.path.dirname(__file__), "..", "..", "img")
+        vendas_path = os.path.join(img_dir, "vendas.png")
+        if os.path.exists(vendas_path):
+            st.image(vendas_path, caption="Layout de vendas (exemplo)", width=900)
+        else:
+            renderizar_placeholder_imagem("Layout de vendas")
+
+        st.markdown("""
+---
+
+## 4. Checklist de Validação de Vendas
+
+Ao analisar o arquivo recebido, verifique:
+
+* [ ] O delimitador do CSV está correto?
+* [ ] O faturamento (R$) está usando o formato decimal adequado?
+* [ ] Existem registros para todas as horas do dia em que a loja esteve aberta?
+* [ ] O campo "Setor" identifica claramente o que é o "Total"?
+* [ ] O número de cupons do setor Total é coerente com o movimento da loja?
+
+---
+
+## 5. Dúvidas Frequentes | Vendas
+
+**A soma dos setores não bate com o Total, o que fazer?**
+
+* Isso é normal para **Cupons**, mas o faturamento (R$) e itens devem bater. Se o faturamento não bater, peça ao RH/TI do cliente para revisar a exportação.
+
+**O arquivo veio sem a quebra de hora em hora, podemos subir?**
+
+* Não. Sem a quebra horária, o sistema não consegue gerar a curva de produtividade e a escala ficará comprometida.
+""")
