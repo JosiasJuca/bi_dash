@@ -59,14 +59,15 @@ def renderizar_modelo_email():
         template_email = """
     Assunto: Moavi | [<Cliente>] | Batidas de ponto
 
-    Boa tarde!
-    Tudo bem?
+    Olá!  Tudo bem?
 
-    Ao conferir o acompanhamento de batidas, identifiquei que algumas filiais ficaram sem registro de batidas.
- 
-    Vocês conseguem confirmar se houve algum problema operacional?
- 
-    Caso não tenha ocorrido problema, poderia, por gentileza, me enviar o retroativo das batidas?
+    Identificamos a falta de marcação de ponto para algumas filiais nos dias XXXXXXX.
+
+    Poderiam investigar o que causou esse problema de não envio das marcações de ponto, por favor?
+
+    Além disso, poderiam reenviar as marcações de ponto dos dias XXXX no modelo atual da integração ou via AFD/AFDT, por favor?
+    
+    Anexo modelo da integração.
 
     Atenciosamente,
         """
